@@ -1,0 +1,98 @@
+.wa-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 140px;
+  min-height: 140px;
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--sumi-800);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--washi-50);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.wa-tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--space-3);
+  right: var(--space-3);
+  height: 1px;
+  background: var(--border-gold);
+  opacity: 0.4;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.wa-tile:hover {
+  border-color: var(--kincha-500);
+  background-color: var(--sumi-700);
+  box-shadow: var(--shadow-andon-hover);
+}
+.wa-tile:hover::before {
+  opacity: 1;
+}
+
+.wa-tile:active {
+  transform: translateY(1px);
+}
+
+.wa-tile__kana {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  font-weight: 300;
+  color: var(--washi-400);
+  letter-spacing: 0.18em;
+}
+
+.wa-tile__name {
+  font-family: var(--font-mincho);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: var(--ls-mincho);
+  color: var(--washi-50);
+}
+
+.wa-tile__state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--washi-300);
+}
+
+.wa-tile__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--washi-400);
+}
+
+.wa-tile__state--on-shift {
+  color: var(--success-ink);
+}
+.wa-tile__state--on-shift .wa-tile__dot {
+  background: var(--success-ink);
+  box-shadow: 0 0 10px rgba(165, 193, 107, 0.5);
+}
+
+.wa-tile__state--on-break {
+  color: var(--kincha-400);
+}
+.wa-tile__state--on-break .wa-tile__dot {
+  background: var(--kincha-400);
+  box-shadow: 0 0 10px rgba(212, 160, 23, 0.5);
+}

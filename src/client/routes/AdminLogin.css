@@ -1,0 +1,146 @@
+.wa-admin-login {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: var(--space-7) var(--space-5);
+  background-color: var(--bg-base);
+  overflow: hidden;
+}
+
+.wa-admin-login__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(212, 160, 23, 0.1), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(178, 58, 46, 0.07), transparent 60%);
+}
+
+.wa-admin-login__main {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: auto;
+}
+
+.wa-admin-login__brand {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+.wa-admin-login__card {
+  width: 100%;
+}
+
+.wa-admin-login__title {
+  font-family: var(--font-mincho);
+  letter-spacing: var(--ls-mincho);
+  font-size: var(--fs-h2);
+  color: var(--washi-50);
+}
+
+.wa-admin-login__lede {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.wa-admin-login__form {
+  display: block;
+}
+
+.wa-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wa-field__label {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.18em;
+  color: var(--text-meta);
+  text-transform: uppercase;
+}
+
+.wa-field__input {
+  appearance: none;
+  width: 100%;
+  background-color: var(--sumi-900);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body-lg);
+  color: var(--washi-50);
+  min-height: 52px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.wa-field__input::placeholder {
+  color: var(--washi-500);
+}
+
+.wa-field__input:hover {
+  border-color: var(--border-hairline-strong);
+}
+
+.wa-field__input:focus {
+  outline: none;
+  border-color: var(--kincha-400);
+  box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.18);
+  background-color: var(--sumi-850);
+}
+
+.wa-field__input.is-invalid,
+.wa-field__input[aria-invalid="true"] {
+  border-color: var(--shu-500);
+  box-shadow: 0 0 0 2px rgba(178, 58, 46, 0.25);
+}
+
+.wa-field__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wa-field__error {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--danger-ink);
+}
+
+.wa-admin-login__error {
+  border: 1px solid rgba(178, 58, 46, 0.5);
+  background-color: rgba(178, 58, 46, 0.12);
+  color: var(--danger-ink);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+}
+
+.wa-admin-login__footer {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  padding-top: var(--space-3);
+}
+
+.wa-admin-login__note {
+  color: var(--text-meta);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.04em;
+}

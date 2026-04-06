@@ -1,0 +1,19 @@
+.wa-andon {
+  display: inline-block;
+  border-radius: var(--radius-md);
+  transition: box-shadow 220ms var(--ease-out);
+}
+
+.wa-andon--kincha:hover {
+  box-shadow: 0 0 28px rgba(212, 160, 23, 0.25);
+}
+
+.wa-andon--shu:hover {
+  box-shadow: 0 0 28px rgba(178, 58, 46, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-andon {
+    transition: none;
+  }
+}

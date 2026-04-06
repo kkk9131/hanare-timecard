@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1700" font-family="Menlo, Consolas, monospace">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#888"/>
+    </marker>
+    <style>
+      .phase-bg { fill: #f7f3eb; stroke: #b8860b; stroke-width: 1.5; rx: 12; }
+      .phase-title { font-size: 22px; font-weight: 700; fill: #1a1410; font-family: "Hiragino Mincho ProN", "Noto Serif JP", serif; }
+      .node { stroke: #2c2520; stroke-width: 1.5; rx: 10; }
+      .node-id { font-size: 12px; font-weight: 700; fill: #f5efe4; }
+      .node-name { font-size: 12px; fill: #f5efe4; }
+      .node-meta { font-size: 10px; fill: #d4c9b3; }
+      .legend-text { font-size: 13px; fill: #2c2520; }
+      .stat-num { font-size: 28px; font-weight: 700; fill: #b23a2e; font-family: "Hiragino Mincho ProN", serif; }
+      .stat-label { font-size: 11px; fill: #5d5044; }
+      .title-main { font-size: 30px; font-weight: 700; fill: #1a1410; font-family: "Hiragino Mincho ProN", "Noto Serif JP", serif; }
+      .title-sub { font-size: 14px; fill: #5d5044; }
+      .pass-dot { fill: #4caf50; }
+      .arrow-line { stroke: #888; stroke-width: 1.5; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1700" fill="#fdfaf3"/>
+
+  <!-- Title -->
+  <text x="700" y="50" text-anchor="middle" class="title-main">雀庵 タイムカード兼シフト管理アプリ — Workflow Map</text>
+  <text x="700" y="72" text-anchor="middle" class="title-sub">21 Implement + 4 Evaluate / 4 Phases / 2026-04-06</text>
+
+  <!-- Legend -->
+  <g transform="translate(40, 95)">
+    <rect x="0" y="0" width="1320" height="40" fill="#f5efe4" stroke="#b8860b" stroke-width="1" rx="6"/>
+    <g transform="translate(20, 14)">
+      <rect x="0" y="0" width="18" height="14" rx="3" fill="#6b6f76"/><text x="26" y="12" class="legend-text">infra</text>
+      <rect x="90" y="0" width="18" height="14" rx="3" fill="#3b6cb6"/><text x="116" y="12" class="legend-text">backend</text>
+      <rect x="200" y="0" width="18" height="14" rx="3" fill="#4caf50"/><text x="226" y="12" class="legend-text">frontend</text>
+      <rect x="320" y="0" width="18" height="14" rx="3" fill="#2ea69a"/><text x="346" y="12" class="legend-text">ui / ux</text>
+      <rect x="430" y="0" width="18" height="14" rx="3" fill="#b27a3a"/><text x="456" y="12" class="legend-text">test</text>
+      <rect x="510" y="0" width="18" height="14" rx="3" fill="#d9762e"/><text x="536" y="12" class="legend-text">evaluate</text>
+      <circle cx="640" cy="7" r="6" class="pass-dot"/><text x="652" y="12" class="legend-text">/verify pass</text>
+      <text x="780" y="12" class="legend-text" font-style="italic">「弐」= /fix 回数</text>
+    </g>
+  </g>
+
+  <!-- ============ PHASE 3 ============ -->
+  <g transform="translate(40, 160)">
+    <rect class="phase-bg" x="0" y="0" width="1320" height="240"/>
+    <text x="20" y="32" class="phase-title">Phase 3 · 基盤構築</text>
+    <text x="1300" y="32" text-anchor="end" class="legend-text">Evaluate: PASS (drizzle ↔ zod 整合 / vitest 2/2)</text>
+
+    <!-- 3001 -->
+    <g transform="translate(540, 50)">
+      <rect class="node" width="240" height="64" fill="#6b6f76"/>
+      <text x="12" y="20" class="node-id">task-3001</text>
+      <text x="12" y="38" class="node-name">プロジェクト初期化</text>
+      <text x="12" y="54" class="node-meta">infra · /fix×1 (biome v2)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 3002 -->
+    <g transform="translate(280, 130)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-3002</text>
+      <text x="12" y="38" class="node-name">DB スキーマ + マイグレ</text>
+      <text x="12" y="54" class="node-meta">backend · 1発pass</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 3003 -->
+    <g transform="translate(800, 130)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-3003</text>
+      <text x="12" y="38" class="node-name">共有型 + zod</text>
+      <text x="12" y="54" class="node-meta">backend · /fix×1 (vitest)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 3004 -->
+    <g transform="translate(540, 200)">
+      <rect class="node" width="240" height="32" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-3004 · シードデータ ●</text>
+    </g>
+
+    <!-- arrows: 3001 -> 3002, 3003 -->
+    <path class="arrow-line" d="M 660 114 L 660 122 L 400 122 L 400 130" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 114 L 660 122 L 920 122 L 920 130" marker-end="url(#arrow)"/>
+    <!-- 3002,3003 -> 3004 -->
+    <path class="arrow-line" d="M 400 194 L 400 200 L 660 200" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 920 194 L 920 200 L 660 200" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ============ PHASE 4 ============ -->
+  <g transform="translate(40, 420)">
+    <rect class="phase-bg" x="0" y="0" width="1320" height="320"/>
+    <text x="20" y="32" class="phase-title">Phase 4 · バックエンド</text>
+    <text x="1300" y="32" text-anchor="end" class="legend-text">Evaluate: PASS (vitest 74/74 / E2E curl 完走 / audit 連鎖)</text>
+
+    <!-- 4001 -->
+    <g transform="translate(540, 50)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4001</text>
+      <text x="12" y="38" class="node-name">Hono サーバ + セッション</text>
+      <text x="12" y="54" class="node-meta">backend · /fix×2 (migrate, debug)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4002 -->
+    <g transform="translate(540, 130)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4002</text>
+      <text x="12" y="38" class="node-name">認証 API (PIN + 5回ロック)</text>
+      <text x="12" y="54" class="node-meta">backend · /fix×1 (unit tests)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4003 -->
+    <g transform="translate(40, 210)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4003</text>
+      <text x="12" y="38" class="node-name">打刻 API + 集計</text>
+      <text x="12" y="54" class="node-meta">backend · 1発pass</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4004 -->
+    <g transform="translate(300, 210)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4004</text>
+      <text x="12" y="38" class="node-name">シフト API + 重複検出</text>
+      <text x="12" y="54" class="node-meta">backend · 1発pass</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4007 -->
+    <g transform="translate(560, 210)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4007</text>
+      <text x="12" y="38" class="node-name">従業員/店舗マスタ API</text>
+      <text x="12" y="54" class="node-meta">backend · 1発pass</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4005 -->
+    <g transform="translate(820, 210)">
+      <rect class="node" width="240" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4005</text>
+      <text x="12" y="38" class="node-name">修正申請 + 監査ログ</text>
+      <text x="12" y="54" class="node-meta">backend · /fix×1 (422)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 4006 -->
+    <g transform="translate(1080, 210)">
+      <rect class="node" width="220" height="64" fill="#3b6cb6"/>
+      <text x="12" y="20" class="node-id">task-4006</text>
+      <text x="12" y="38" class="node-name">エクスポート (xlsx/CSV)</text>
+      <text x="12" y="54" class="node-meta">backend · 1発pass</text>
+      <circle cx="200" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- arrows -->
+    <path class="arrow-line" d="M 660 114 L 660 130" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 202 L 160 202 L 160 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 202 L 420 202 L 420 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 202 L 940 202 L 940 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 202 L 1190 202 L 1190 210" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ============ PHASE 5 ============ -->
+  <g transform="translate(40, 760)">
+    <rect class="phase-bg" x="0" y="0" width="1320" height="380"/>
+    <text x="20" y="32" class="phase-title">Phase 5 · フロントエンド (和モダン)</text>
+    <text x="1300" y="32" text-anchor="end" class="legend-text">Evaluate: PASS (agent-browser 全画面 / 墨黒+朱+金茶)</text>
+
+    <!-- 5001 frontend -->
+    <g transform="translate(540, 50)">
+      <rect class="node" width="240" height="64" fill="#4caf50"/>
+      <text x="12" y="20" class="node-id">task-5001</text>
+      <text x="12" y="38" class="node-name">React + ルーティング骨組</text>
+      <text x="12" y="54" class="node-meta">frontend · 1発pass</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5002 ui -->
+    <g transform="translate(540, 130)">
+      <rect class="node" width="240" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5002</text>
+      <text x="12" y="38" class="node-name">和モダン tokens + 共通 UI</text>
+      <text x="12" y="54" class="node-meta">ui · /fix×1 (dev preview)</text>
+      <circle cx="220" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5003 -->
+    <g transform="translate(40, 210)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5003</text>
+      <text x="12" y="38" class="node-name">打刻トップ K01-K04 (kiosk)</text>
+      <text x="12" y="54" class="node-meta">ux · 1発pass</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5004 -->
+    <g transform="translate(360, 210)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5004</text>
+      <text x="12" y="38" class="node-name">従業員ダッシュボード E01-E05</text>
+      <text x="12" y="54" class="node-meta">ux · 1発pass</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5005 -->
+    <g transform="translate(680, 210)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5005</text>
+      <text x="12" y="38" class="node-name">管理者ログイン+ダッシュ A00-A01</text>
+      <text x="12" y="54" class="node-meta">ux · /fix×1 (working list, 朱バッジ)</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5006 -->
+    <g transform="translate(40, 295)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5006</text>
+      <text x="12" y="38" class="node-name">シフト編成 A02 (週/月)</text>
+      <text x="12" y="54" class="node-meta">ux · 1発pass</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5007 -->
+    <g transform="translate(360, 295)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5007</text>
+      <text x="12" y="38" class="node-name">審査+マスタ A03/A04/A05</text>
+      <text x="12" y="54" class="node-meta">ux · 1発pass (帳場コンセプト)</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 5008 -->
+    <g transform="translate(680, 295)">
+      <rect class="node" width="280" height="64" fill="#2ea69a"/>
+      <text x="12" y="20" class="node-id">task-5008</text>
+      <text x="12" y="38" class="node-name">エクスポート+監査 A06/A07</text>
+      <text x="12" y="54" class="node-meta">ux · 1発pass</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- arrows: 5001 -> 5002 -->
+    <path class="arrow-line" d="M 660 114 L 660 130" marker-end="url(#arrow)"/>
+    <!-- 5002 -> 5003,5004,5005 -->
+    <path class="arrow-line" d="M 660 194 L 660 202 L 180 202 L 180 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 202 L 500 202 L 500 210" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 660 194 L 660 210" marker-end="url(#arrow)"/>
+    <!-- 5005 -> 5006,5007,5008 -->
+    <path class="arrow-line" d="M 820 274 L 820 285 L 180 285 L 180 295" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 820 274 L 820 285 L 500 285 L 500 295" marker-end="url(#arrow)"/>
+    <path class="arrow-line" d="M 820 274 L 820 295" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ============ PHASE 6 ============ -->
+  <g transform="translate(40, 1160)">
+    <rect class="phase-bg" x="0" y="0" width="1320" height="200"/>
+    <text x="20" y="32" class="phase-title">Phase 6 · 仕上げ</text>
+    <text x="1300" y="32" text-anchor="end" class="legend-text">Evaluate: PASS (start.sh / backup 30 世代 / Playwright 1/1)</text>
+
+    <!-- 6001 -->
+    <g transform="translate(80, 60)">
+      <rect class="node" width="280" height="64" fill="#6b6f76"/>
+      <text x="12" y="20" class="node-id">task-6001</text>
+      <text x="12" y="38" class="node-name">バックアップ + start.sh</text>
+      <text x="12" y="54" class="node-meta">infra · /fix×1 (tsconfig rootDir)</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 6002 -->
+    <g transform="translate(520, 60)">
+      <rect class="node" width="280" height="64" fill="#6b6f76"/>
+      <text x="12" y="20" class="node-id">task-6002</text>
+      <text x="12" y="38" class="node-name">README + 運用ドキュメント</text>
+      <text x="12" y="54" class="node-meta">infra · /fix×1 (見出し追加)</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- 6003 -->
+    <g transform="translate(960, 60)">
+      <rect class="node" width="280" height="64" fill="#b27a3a"/>
+      <text x="12" y="20" class="node-id">task-6003</text>
+      <text x="12" y="38" class="node-name">E2E スモーク (Playwright)</text>
+      <text x="12" y="54" class="node-meta">test · /fix×1 (Playwright 正規導入)</text>
+      <circle cx="260" cy="20" r="6" class="pass-dot"/>
+    </g>
+
+    <!-- arrow: 6001 -> 6002 -->
+    <path class="arrow-line" d="M 360 92 L 520 92" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ============ STATS / FOOTER ============ -->
+  <g transform="translate(40, 1390)">
+    <rect x="0" y="0" width="1320" height="280" fill="#f5efe4" stroke="#b8860b" stroke-width="1.5" rx="12"/>
+    <text x="20" y="32" class="phase-title">統計</text>
+
+    <g transform="translate(40, 60)">
+      <text x="0" y="30" class="stat-num">21</text>
+      <text x="0" y="48" class="stat-label">Implement チケット</text>
+    </g>
+    <g transform="translate(180, 60)">
+      <text x="0" y="30" class="stat-num">4 / 4</text>
+      <text x="0" y="48" class="stat-label">Phase Evaluate (全 PASS)</text>
+    </g>
+    <g transform="translate(360, 60)">
+      <text x="0" y="30" class="stat-num">12</text>
+      <text x="0" y="48" class="stat-label">1 発 pass チケット</text>
+    </g>
+    <g transform="translate(500, 60)">
+      <text x="0" y="30" class="stat-num">9</text>
+      <text x="0" y="48" class="stat-label">/fix を要した数</text>
+    </g>
+    <g transform="translate(620, 60)">
+      <text x="0" y="30" class="stat-num">75 / 75</text>
+      <text x="0" y="48" class="stat-label">vitest passing</text>
+    </g>
+    <g transform="translate(800, 60)">
+      <text x="0" y="30" class="stat-num">1 / 1</text>
+      <text x="0" y="48" class="stat-label">Playwright E2E</text>
+    </g>
+    <g transform="translate(960, 60)">
+      <text x="0" y="30" class="stat-num">10</text>
+      <text x="0" y="48" class="stat-label">DB テーブル</text>
+    </g>
+    <g transform="translate(1100, 60)">
+      <text x="0" y="30" class="stat-num">17</text>
+      <text x="0" y="48" class="stat-label">画面数 (K+E+A)</text>
+    </g>
+
+    <text x="20" y="180" class="legend-text" font-weight="700">技術スタック</text>
+    <text x="20" y="200" class="legend-text">Hono + React 19 + Vite 8 + TypeScript + better-sqlite3 + Drizzle ORM + zod 4 + exceljs + bcrypt + Playwright</text>
+
+    <text x="20" y="230" class="legend-text" font-weight="700">並列実行ピーク</text>
+    <text x="20" y="250" class="legend-text">Wave 7 で 5 タスク並列 (5004/5006/5007/5008 + Phase 4 Evaluate)</text>
+  </g>
+</svg>

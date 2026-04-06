@@ -1,0 +1,148 @@
+.wa-btn {
+  --btn-fg: var(--washi-50);
+  --btn-bg: transparent;
+  --btn-border: var(--border-hairline-strong);
+  --btn-fg-hover: var(--washi-50);
+  --btn-bg-hover: var(--sumi-700);
+  --btn-border-hover: var(--kincha-400);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  padding: 0 var(--space-6);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+  font-weight: 500;
+  letter-spacing: var(--ls-mincho);
+  color: var(--btn-fg);
+  background-color: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wa-btn::before {
+  /* inner hairline — 印刷の版押し風 */
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  transition: border-color var(--dur-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.wa-btn:hover {
+  color: var(--btn-fg-hover);
+  background-color: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+  box-shadow: var(--shadow-andon-hover);
+}
+.wa-btn:hover::before {
+  border-color: rgba(212, 160, 23, 0.15);
+}
+
+.wa-btn:active {
+  transform: translateY(1px);
+}
+
+.wa-btn:disabled,
+.wa-btn[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.wa-btn__label {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.wa-btn__leading {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.1em;
+}
+
+/* -- variants ------------------------------------------------- */
+
+/* primary: 朱の縁→hover で朱塗り */
+.wa-btn--primary {
+  --btn-fg: var(--washi-50);
+  --btn-bg: rgba(178, 58, 46, 0.08);
+  --btn-border: var(--shu-500);
+  --btn-fg-hover: var(--washi-50);
+  --btn-bg-hover: var(--shu-500);
+  --btn-border-hover: var(--shu-400);
+}
+.wa-btn--primary:hover {
+  box-shadow:
+    0 0 0 1px var(--shu-400) inset,
+    0 10px 28px rgba(178, 58, 46, 0.28);
+}
+
+/* secondary: 金茶の縁 */
+.wa-btn--secondary {
+  --btn-fg: var(--kincha-300);
+  --btn-bg: transparent;
+  --btn-border: var(--kincha-500);
+  --btn-fg-hover: var(--sumi-900);
+  --btn-bg-hover: var(--kincha-400);
+  --btn-border-hover: var(--kincha-400);
+}
+
+/* ghost: 最も控えめ */
+.wa-btn--ghost {
+  --btn-fg: var(--washi-300);
+  --btn-bg: transparent;
+  --btn-border: var(--border-hairline);
+  --btn-fg-hover: var(--washi-50);
+  --btn-bg-hover: var(--sumi-700);
+  --btn-border-hover: var(--kogecha-500);
+}
+
+/* danger */
+.wa-btn--danger {
+  --btn-fg: var(--danger-ink);
+  --btn-bg: transparent;
+  --btn-border: var(--shu-600);
+  --btn-fg-hover: var(--washi-50);
+  --btn-bg-hover: var(--shu-600);
+  --btn-border-hover: var(--shu-500);
+}
+
+/* -- sizes ---------------------------------------------------- */
+.wa-btn--sm {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: var(--fs-body);
+}
+.wa-btn--md {
+  min-height: var(--tap-min);
+  padding: 0 var(--space-6);
+  font-size: var(--fs-body-lg);
+}
+.wa-btn--lg {
+  min-height: 72px;
+  padding: 0 var(--space-8);
+  font-size: 22px;
+}
+
+.wa-btn--block {
+  display: flex;
+  width: 100%;
+}

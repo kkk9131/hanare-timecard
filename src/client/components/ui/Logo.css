@@ -1,0 +1,74 @@
+.wa-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mincho);
+  color: var(--washi-50);
+  user-select: none;
+}
+
+.wa-logo__mark {
+  font-weight: 500;
+  letter-spacing: var(--ls-logo);
+  line-height: 1;
+}
+
+.wa-logo__rule {
+  display: block;
+  background: var(--kincha-500);
+  opacity: 0.55;
+}
+
+.wa-logo__sub {
+  font-family: var(--font-gothic);
+  font-weight: 300;
+  color: var(--washi-300);
+  letter-spacing: 0.2em;
+  line-height: 1;
+}
+
+/* -- sizes ---------------------------------------------------- */
+.wa-logo--sm .wa-logo__mark {
+  font-size: 22px;
+}
+.wa-logo--sm .wa-logo__sub {
+  font-size: 11px;
+}
+.wa-logo--md .wa-logo__mark {
+  font-size: 32px;
+}
+.wa-logo--md .wa-logo__sub {
+  font-size: 13px;
+}
+.wa-logo--lg .wa-logo__mark {
+  font-size: 48px;
+}
+.wa-logo--lg .wa-logo__sub {
+  font-size: 15px;
+}
+
+/* -- horizontal rule (default) -------------------------------- */
+.wa-logo:not(.wa-logo--vertical) .wa-logo__rule {
+  width: 1px;
+  height: 1.4em;
+}
+
+/* -- vertical (writing-mode) ---------------------------------- */
+.wa-logo--vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+.wa-logo--vertical .wa-logo__mark {
+  letter-spacing: var(--ls-logo);
+}
+.wa-logo--vertical .wa-logo__rule {
+  width: 1.4em;
+  height: 1px;
+}
+.wa-logo--vertical .wa-logo__sub {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.3em;
+}

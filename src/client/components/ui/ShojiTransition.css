@@ -1,0 +1,55 @@
+.wa-shoji {
+  animation: wa-shoji-enter 320ms var(--ease-shoji) both;
+  will-change: transform, opacity;
+}
+
+.wa-shoji--horizontal {
+  animation-name: wa-shoji-enter-h;
+}
+
+.wa-shoji--vertical {
+  animation-name: wa-shoji-enter-v;
+}
+
+@keyframes wa-shoji-enter-h {
+  0% {
+    opacity: 0;
+    transform: translateX(24px);
+    clip-path: inset(0 0 0 40%);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes wa-shoji-enter-v {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-shoji,
+  .wa-shoji--horizontal,
+  .wa-shoji--vertical {
+    animation: wa-shoji-fade 160ms ease-out both;
+  }
+  @keyframes wa-shoji-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

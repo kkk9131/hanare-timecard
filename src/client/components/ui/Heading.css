@@ -1,0 +1,41 @@
+.wa-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-family: var(--font-mincho);
+  font-weight: 500;
+  color: var(--washi-50);
+  letter-spacing: var(--ls-mincho);
+  line-height: var(--lh-tight);
+}
+
+.wa-heading__eyebrow {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  color: var(--kincha-400);
+}
+
+.wa-heading__text {
+  display: inline-block;
+}
+
+.wa-heading--h1 {
+  font-size: var(--fs-h1);
+}
+.wa-heading--h2 {
+  font-size: var(--fs-h2);
+}
+.wa-heading--h3 {
+  font-size: var(--fs-h3);
+}
+
+.wa-heading--vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.25em;
+}
+.wa-heading--vertical .wa-heading__eyebrow {
+  writing-mode: vertical-rl;
+}

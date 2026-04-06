@@ -1,0 +1,83 @@
+.wa-clock {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--washi-50);
+  font-family: var(--font-mincho);
+}
+
+.wa-clock__date {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  font-weight: 300;
+  color: var(--washi-300);
+  letter-spacing: 0.12em;
+}
+
+.wa-clock__weekday {
+  color: var(--kincha-400);
+  font-size: var(--fs-meta);
+}
+
+.wa-clock__time {
+  display: flex;
+  align-items: baseline;
+  line-height: 1;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--washi-50);
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+}
+
+.wa-clock__sep {
+  display: inline-block;
+  margin: 0 0.08em;
+  color: var(--kincha-400);
+  opacity: 0.8;
+  animation: wa-clock-breath 1.6s ease-in-out infinite;
+}
+
+.wa-clock__sep--sm {
+  opacity: 0.55;
+}
+
+.wa-clock__digits--sm {
+  font-size: 0.48em;
+  color: var(--washi-300);
+  margin-left: 0.06em;
+}
+
+/* -- sizes ---------------------------------------------------- */
+.wa-clock--md .wa-clock__time {
+  font-size: 64px;
+}
+.wa-clock--lg .wa-clock__time {
+  font-size: var(--fs-clock);
+}
+
+@keyframes wa-clock-breath {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-clock__sep {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 768px) {
+  .wa-clock--lg .wa-clock__time {
+    font-size: 72px;
+  }
+}

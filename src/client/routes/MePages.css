@@ -1,0 +1,559 @@
+/* ============================================================
+ * 雀庵 — 従業員マイページ (E01-E05) 共通スタイル
+ * ============================================================ */
+
+.me-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+.me-page__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-hairline);
+  padding-bottom: var(--space-5);
+  position: relative;
+}
+
+.me-page__head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 80px;
+  height: 1px;
+  background: var(--kincha-500);
+}
+
+.me-page__eyebrow {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.me-page__title {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-h1);
+  font-weight: 500;
+  letter-spacing: var(--ls-mincho);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.me-page__subtitle {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ----- loading / empty / error ----- */
+
+.me-state {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  color: var(--text-meta);
+  letter-spacing: var(--ls-mincho);
+  padding: var(--space-7) 0;
+  text-align: center;
+}
+
+.me-state--error {
+  color: var(--danger-ink);
+}
+
+/* ============================================================
+ * E01 Dashboard — 当月集計
+ * ============================================================ */
+
+.me-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.me-summary__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  border-right: 1px solid var(--border-hairline);
+  position: relative;
+}
+
+.me-summary__cell:last-child {
+  border-right: none;
+}
+
+.me-summary__glyph {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-4);
+  font-family: var(--font-mincho);
+  font-size: 32px;
+  color: rgba(212, 160, 23, 0.18);
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
+.me-summary__label {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.16em;
+  color: var(--text-meta);
+}
+
+.me-summary__value {
+  font-family: var(--font-mincho);
+  font-size: 44px;
+  font-weight: 300;
+  color: var(--washi-50);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.me-summary__unit {
+  font-family: var(--font-mincho);
+  font-size: 14px;
+  color: var(--washi-400);
+  margin-left: 2px;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 900px) {
+  .me-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .me-summary__cell:nth-child(2) {
+    border-right: none;
+  }
+  .me-summary__cell:nth-child(1),
+  .me-summary__cell:nth-child(2) {
+    border-bottom: 1px solid var(--border-hairline);
+  }
+}
+
+@media (max-width: 480px) {
+  .me-summary {
+    grid-template-columns: 1fr;
+  }
+  .me-summary__cell {
+    border-right: none;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .me-summary__cell:last-child {
+    border-bottom: none;
+  }
+}
+
+/* dashboard 2 column layout for week / notifications */
+.me-dash__row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .me-dash__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.me-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.me-week__row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: var(--space-4);
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--border-hairline);
+}
+
+.me-week__row:last-child {
+  border-bottom: none;
+}
+
+.me-week__date {
+  font-family: var(--font-mincho);
+  font-size: 18px;
+  color: var(--washi-100);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-week__date--off {
+  color: var(--washi-500);
+}
+
+.me-week__weekday {
+  font-family: var(--font-gothic);
+  font-size: 11px;
+  color: var(--text-meta);
+  margin-left: var(--space-2);
+}
+
+.me-week__time {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.me-week__time--empty {
+  color: var(--text-meta);
+  font-style: italic;
+}
+
+.me-week__store {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+}
+
+.me-notice__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.me-notice__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--border-hairline);
+}
+
+.me-notice__item:last-child {
+  border-bottom: none;
+}
+
+.me-notice__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.me-notice__date {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-notice__reason {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+  line-height: var(--lh-body);
+}
+
+/* ============================================================
+ * E02 History — 表
+ * ============================================================ */
+
+.me-tabs {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.me-tabs__btn {
+  appearance: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--ls-mincho);
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-right: 1px solid var(--border-hairline);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.me-tabs__btn:last-child {
+  border-right: none;
+}
+
+.me-tabs__btn:hover {
+  color: var(--text-primary);
+  background-color: rgba(245, 239, 228, 0.03);
+}
+
+.me-tabs__btn.is-active {
+  background-color: var(--kogecha-700);
+  color: var(--washi-50);
+}
+
+.me-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  color: var(--text-primary);
+}
+
+.me-table thead th {
+  text-align: left;
+  font-family: var(--font-mincho);
+  font-weight: 400;
+  letter-spacing: var(--ls-mincho);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--kincha-500);
+  text-transform: none;
+}
+
+.me-table thead th.is-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.me-table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px dashed var(--border-hairline);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.me-table tbody td.is-numeric {
+  text-align: right;
+}
+
+.me-table tbody tr:hover td {
+  background-color: rgba(245, 239, 228, 0.02);
+}
+
+.me-table tbody td.is-empty {
+  color: var(--text-meta);
+  font-style: italic;
+}
+
+.me-table tbody td.is-date {
+  font-family: var(--font-mincho);
+  color: var(--washi-100);
+}
+
+.me-table tbody tr.me-table__footer-row td {
+  border-bottom: none;
+  border-top: 1px solid var(--border-hairline);
+  font-family: var(--font-mincho);
+  color: var(--washi-100);
+  font-size: var(--fs-body-lg);
+}
+
+/* ============================================================
+ * E03 Corrections / E05 ShiftRequests — 申請
+ * ============================================================ */
+
+.me-form {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr 1fr;
+}
+
+.me-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.me-form__field--full {
+  grid-column: 1 / -1;
+}
+
+.me-form__label {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  letter-spacing: 0.12em;
+}
+
+.me-form__input,
+.me-form__select,
+.me-form__textarea {
+  appearance: none;
+  background-color: var(--sumi-850);
+  color: var(--washi-50);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.me-form__textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.me-form__input:focus,
+.me-form__select:focus,
+.me-form__textarea:focus {
+  outline: none;
+  border-color: var(--kincha-400);
+  box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.25);
+}
+
+.me-form__error {
+  color: var(--danger-ink);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  margin: 0;
+}
+
+.me-form__success {
+  color: var(--success-ink);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--ls-mincho);
+  margin: 0;
+}
+
+.me-form__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .me-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+ * E04 Shifts — 週/月ビュー
+ * ============================================================ */
+
+.me-shift-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background-color: var(--border-hairline);
+  border: 1px solid var(--border-hairline);
+}
+
+.me-shift-grid__cell {
+  background-color: var(--sumi-850);
+  padding: var(--space-3);
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.me-shift-grid__cell--head {
+  background-color: var(--sumi-800);
+  min-height: 0;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  letter-spacing: var(--ls-mincho);
+  text-align: center;
+}
+
+.me-shift-grid__date {
+  font-family: var(--font-mincho);
+  font-size: 18px;
+  color: var(--washi-100);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-shift-grid__date--other {
+  color: var(--washi-500);
+}
+
+.me-shift-grid__date--today {
+  color: var(--kincha-300);
+}
+
+.me-shift-grid__entry {
+  background-color: var(--kogecha-700);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-xs);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--washi-50);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+@media (max-width: 720px) {
+  .me-shift-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    font-size: 12px;
+  }
+  .me-shift-grid__cell {
+    min-height: 72px;
+    padding: var(--space-2);
+  }
+}
+
+.me-shift-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.me-shift-list__row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: var(--space-4);
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--border-hairline);
+}
+
+.me-shift-list__row:last-child {
+  border-bottom: none;
+}
+
+.me-shift-list__date {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+  color: var(--washi-100);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-shift-list__time {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.me-shift-list__store {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+}

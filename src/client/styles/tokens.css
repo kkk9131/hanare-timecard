@@ -1,0 +1,130 @@
+/* ============================================================
+ * 雀庵 Timecard — Design Tokens
+ * 和モダン (wa-modern) / sumi black + washi + shu accent
+ * ============================================================ */
+
+:root {
+  /* -- 基調 (sumi / ground ink) --------------------------------- */
+  --sumi-900: #0e0c0a; /* 漆黒: app background */
+  --sumi-850: #14110e;
+  --sumi-800: #1a1612; /* card surface */
+  --sumi-700: #2a2520; /* raised / hover surface */
+  --sumi-600: #3a342d;
+
+  /* -- 焦茶 (kogecha / aged wood) ------------------------------- */
+  --kogecha-700: #2e241b;
+  --kogecha-600: #3d2f24; /* accent surfaces, hairline borders */
+  --kogecha-500: #5a4634;
+
+  /* -- 紙・墨 (washi / paper) ----------------------------------- */
+  --washi-50: #f5efe4; /* primary text on dark */
+  --washi-100: #ebe3d3;
+  --washi-200: #dcd2ba;
+  --washi-300: #c8bda5; /* secondary text */
+  --washi-400: #9a8f78; /* tertiary / meta */
+  --washi-500: #6d6552;
+
+  /* -- 朱 (shu / vermilion) ------------------------------------- */
+  --shu-600: #8f2e24;
+  --shu-500: #b23a2e; /* primary action */
+  --shu-400: #c95040; /* hover */
+  --shu-300: #d96a5a;
+
+  /* -- 金茶 (kincha / gold brown) ------------------------------- */
+  --kincha-600: #8f6708;
+  --kincha-500: #b8860b; /* emphasis */
+  --kincha-400: #d4a017; /* focus ring, andon glow */
+  --kincha-300: #e6b73a;
+
+  /* -- 状態 (state) --------------------------------------------- */
+  --success: #6b8e3d; /* 苔 moss */
+  --success-ink: #a5c16b;
+  --warning: #d4a017;
+  --danger: #b23a2e;
+  --danger-ink: #d96a5a;
+
+  /* -- Semantic aliases ----------------------------------------- */
+  --bg-base: var(--sumi-900);
+  --bg-surface: var(--sumi-800);
+  --bg-raised: var(--sumi-700);
+  --bg-accent: var(--kogecha-600);
+  --border-hairline: rgba(90, 70, 52, 0.45); /* kogecha-500 @ 45% */
+  --border-hairline-strong: rgba(90, 70, 52, 0.75);
+  --border-gold: rgba(212, 160, 23, 0.35);
+  --text-primary: var(--washi-50);
+  --text-secondary: var(--washi-300);
+  --text-meta: var(--washi-400);
+  --text-on-accent: var(--washi-50);
+
+  /* -- Typography ----------------------------------------------- */
+  --font-mincho:
+    "Noto Serif JP", "游明朝", "Yu Mincho", "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", serif;
+  --font-gothic:
+    "Noto Sans JP", "游ゴシック", "Yu Gothic", "Hiragino Sans", "ヒラギノ角ゴ ProN", system-ui,
+    sans-serif;
+
+  --fs-meta: 13px;
+  --fs-body: 16px;
+  --fs-body-lg: 18px;
+  --fs-h3: 20px;
+  --fs-h2: 28px;
+  --fs-h1: 36px;
+  --fs-display: 64px;
+  --fs-clock: 96px;
+
+  --lh-tight: 1.15;
+  --lh-body: 1.7;
+
+  --ls-tight: -0.01em;
+  --ls-mincho: 0.08em; /* 明朝は開く */
+  --ls-logo: 0.4em; /* 縦組ロゴ */
+
+  /* -- Spacing (8px base) --------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 56px;
+  --space-9: 80px;
+  --space-10: 120px;
+
+  /* -- Radii (紙の角: 控えめ) ----------------------------------- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* -- Shadows (行灯の灯り) ------------------------------------- */
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 0 rgba(245, 239, 228, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 1px 0 rgba(245, 239, 228, 0.04) inset, 0 14px 40px rgba(0, 0, 0, 0.55);
+  --shadow-andon: 0 0 0 rgba(212, 160, 23, 0);
+  --shadow-andon-hover: 0 0 28px rgba(212, 160, 23, 0.22);
+
+  /* -- Tap targets ---------------------------------------------- */
+  --tap-min: 56px;
+
+  /* -- Motion --------------------------------------------------- */
+  --ease-shoji: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+
+  /* -- Z layers ------------------------------------------------- */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-overlay: 100;
+  --z-toast: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

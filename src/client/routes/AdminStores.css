@@ -1,0 +1,245 @@
+.wa-stores {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.wa-stores__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.wa-stores__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.wa-stores__chapter {
+  writing-mode: vertical-rl;
+  font-family: var(--font-mincho);
+  font-size: var(--fs-h2);
+  color: var(--kincha-400);
+  letter-spacing: 0.3em;
+  line-height: 1;
+  padding: 4px 6px 4px 0;
+  border-right: 1px solid var(--border-gold);
+}
+
+/* ---------- grid (見開き) ---------- */
+.wa-stores__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-5);
+}
+
+.wa-stores__item {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: wa-stores-in 320ms var(--ease-out) forwards;
+}
+
+@keyframes wa-stores-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wa-stores__cardInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.wa-stores__cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.wa-stores__code {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--kincha-400);
+  letter-spacing: 0.2em;
+  border: 1px solid var(--border-gold);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+}
+
+.wa-stores__name {
+  margin: 0;
+  font-family: var(--font-mincho);
+  font-size: var(--fs-h2);
+  color: var(--washi-50);
+  letter-spacing: var(--ls-mincho);
+  line-height: var(--lh-tight);
+}
+
+.wa-stores__meta {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wa-stores__metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dotted var(--border-hairline);
+}
+
+.wa-stores__metaItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.wa-stores__metaItem dt {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  letter-spacing: 0.05em;
+}
+
+.wa-stores__metaItem dd {
+  margin: 0;
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+  color: var(--washi-50);
+  letter-spacing: var(--ls-mincho);
+}
+
+.wa-stores__particle {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-meta);
+  letter-spacing: 0;
+}
+
+.wa-stores__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- empty ---------- */
+.wa-stores__empty {
+  margin: 0;
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  color: var(--text-meta);
+  text-align: center;
+  padding: var(--space-5);
+}
+
+.wa-stores__empty--error {
+  color: var(--danger-ink);
+}
+
+/* ---------- form ---------- */
+.wa-stores__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wa-stores__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+
+.wa-stores__field input {
+  background-color: var(--sumi-900);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  color: var(--washi-50);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  min-height: 38px;
+}
+
+.wa-stores__field input:focus-visible {
+  outline: 2px solid var(--kincha-400);
+  outline-offset: 2px;
+  border-color: var(--border-gold);
+}
+
+.wa-stores__field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wa-stores__timeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.wa-stores__weekdays {
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  margin: 0;
+}
+
+.wa-stores__weekdays legend {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  color: var(--washi-300);
+  padding: 0 var(--space-2);
+  letter-spacing: var(--ls-mincho);
+}
+
+.wa-stores__weekdaysRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.wa-stores__day {
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background-color: var(--sumi-900);
+  color: var(--text-meta);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.wa-stores__day:hover {
+  border-color: var(--border-gold);
+  color: var(--washi-100);
+}
+
+.wa-stores__day.is-active {
+  background-color: var(--shu-600);
+  border-color: var(--shu-500);
+  color: var(--washi-50);
+}
+
+.wa-stores__day:focus-visible {
+  outline: 2px solid var(--kincha-400);
+  outline-offset: 2px;
+}

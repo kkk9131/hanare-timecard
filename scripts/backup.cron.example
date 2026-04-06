@@ -1,0 +1,40 @@
+# 雀庵 タイムカード 日次バックアップの設定例
+# 毎日 03:00 に SQLite のバックアップを取得し、直近 30 世代を保持する。
+#
+# ============================================================
+# 1. crontab エントリ (Linux / macOS どちらでも可)
+# ============================================================
+# crontab -e で開いて以下を追記する。PROJECT_DIR は実際のパスに置き換える。
+#
+# PROJECT_DIR=/Users/owner/hanare-timecard
+# 0 3 * * * cd $PROJECT_DIR && /usr/local/bin/npx tsx scripts/backup.ts >> $PROJECT_DIR/data/backups/backup.log 2>&1
+#
+# ============================================================
+# 2. macOS launchd plist の例
+# ============================================================
+# 保存先: ~/Library/LaunchAgents/com.hanare.timecard.backup.plist
+# 反映:   launchctl load ~/Library/LaunchAgents/com.hanare.timecard.backup.plist
+#
+# <?xml version="1.0" encoding="UTF-8"?>
+# <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+# <plist version="1.0">
+# <dict>
+#   <key>Label</key>
+#   <string>com.hanare.timecard.backup</string>
+#   <key>ProgramArguments</key>
+#   <array>
+#     <string>/bin/bash</string>
+#     <string>-lc</string>
+#     <string>cd /Users/owner/hanare-timecard && /usr/local/bin/npx tsx scripts/backup.ts</string>
+#   </array>
+#   <key>StartCalendarInterval</key>
+#   <dict>
+#     <key>Hour</key><integer>3</integer>
+#     <key>Minute</key><integer>0</integer>
+#   </dict>
+#   <key>StandardOutPath</key>
+#   <string>/Users/owner/hanare-timecard/data/backups/backup.log</string>
+#   <key>StandardErrorPath</key>
+#   <string>/Users/owner/hanare-timecard/data/backups/backup.error.log</string>
+# </dict>
+# </plist>

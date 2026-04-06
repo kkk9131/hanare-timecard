@@ -1,0 +1,113 @@
+.wa-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+}
+
+.wa-shell--with-sidebar {
+  flex-direction: row;
+}
+
+/* ---------- sidebar (admin) ---------------------------------- */
+.wa-shell__sidebar {
+  flex-shrink: 0;
+  width: 240px;
+  background-color: var(--sumi-850);
+  border-right: 1px solid var(--border-hairline);
+  padding: var(--space-6) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.wa-shell__sidebar-logo {
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.wa-shell__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ---------- header (kiosk / employee) ------------------------ */
+.wa-shell__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-8) var(--space-5);
+  border-bottom: 1px solid var(--border-hairline);
+  position: relative;
+}
+
+.wa-shell__header::after {
+  /* accent gold line */
+  content: "";
+  position: absolute;
+  left: var(--space-8);
+  right: var(--space-8);
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border-gold) 30%,
+    var(--border-gold) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.wa-shell__logo {
+  display: flex;
+  align-items: center;
+}
+
+.wa-shell__header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ---------- main --------------------------------------------- */
+.wa-shell__main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-7) var(--space-8);
+}
+
+.wa-shell__main--constrained {
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ---------- responsive --------------------------------------- */
+@media (max-width: 900px) {
+  .wa-shell--with-sidebar {
+    flex-direction: column;
+  }
+  .wa-shell__sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .wa-shell__header,
+  .wa-shell__main {
+    padding-left: var(--space-5);
+    padding-right: var(--space-5);
+  }
+}
+
+@media (max-width: 480px) {
+  .wa-shell__header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+  .wa-shell__main {
+    padding: var(--space-5) var(--space-4);
+  }
+}

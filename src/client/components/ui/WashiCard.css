@@ -1,0 +1,88 @@
+.wa-card {
+  position: relative;
+  background-color: var(--bg-surface);
+  /* paper fiber noise */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.96  0 0 0 0 0.93  0 0 0 0 0.89  0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23p)'/></svg>");
+  background-size: 180px 180px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.wa-card::before {
+  /* top hairline in kincha */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--space-5);
+  right: var(--space-5);
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--border-gold) 25%,
+    var(--border-gold) 75%,
+    transparent 100%
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.wa-card--highlight::before {
+  opacity: 1;
+  background: linear-gradient(to right, transparent 0%, var(--kincha-400) 50%, transparent 100%);
+}
+
+.wa-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.wa-card__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.wa-card__eyebrow {
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  color: var(--kincha-400);
+  text-transform: none;
+}
+
+.wa-card__title {
+  font-family: var(--font-mincho);
+  font-size: var(--fs-h3);
+  font-weight: 500;
+  color: var(--washi-50);
+  letter-spacing: var(--ls-mincho);
+}
+
+.wa-card__action {
+  flex-shrink: 0;
+}
+
+.wa-card__body {
+  color: var(--washi-100);
+}
+
+/* -- padding -------------------------------------------------- */
+.wa-card--pad-sm {
+  padding: var(--space-4);
+}
+.wa-card--pad-md {
+  padding: var(--space-5) var(--space-6);
+}
+.wa-card--pad-lg {
+  padding: var(--space-7) var(--space-8);
+}

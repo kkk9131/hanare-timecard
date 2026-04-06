@@ -1,0 +1,64 @@
+.wa-toast {
+  position: fixed;
+  bottom: var(--space-7);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 280px;
+  max-width: min(560px, 90vw);
+  padding: var(--space-4) var(--space-6);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+  font-weight: 400;
+  letter-spacing: var(--ls-mincho);
+  color: var(--washi-50);
+  background-color: rgba(26, 22, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-hairline-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  animation: wa-toast-in 260ms var(--ease-shoji) both;
+}
+
+.wa-toast__bar {
+  display: block;
+  width: 3px;
+  align-self: stretch;
+  background-color: var(--washi-400);
+  border-radius: 2px;
+}
+
+.wa-toast--info .wa-toast__bar {
+  background-color: var(--kincha-400);
+}
+.wa-toast--success .wa-toast__bar {
+  background-color: var(--success-ink);
+}
+.wa-toast--danger .wa-toast__bar {
+  background-color: var(--shu-400);
+}
+
+.wa-toast__message {
+  flex: 1;
+  line-height: 1.5;
+}
+
+@keyframes wa-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-toast {
+    animation: none;
+  }
+}
