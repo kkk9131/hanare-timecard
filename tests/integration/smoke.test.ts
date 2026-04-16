@@ -120,7 +120,7 @@ afterAll(() => {
 });
 
 describe("task-6003 smoke: primary end-to-end flow", () => {
-  it("health -> admin login -> employee CRUD -> PIN login -> punch -> shift -> correction -> audit -> export", async () => {
+  it("health -> admin login -> employee CRUD -> kiosk login -> punch -> shift -> correction -> audit -> export", async () => {
     // 1. health
     const health = await req("/api/system/health");
     expect(health.status).toBe(200);
@@ -148,7 +148,6 @@ describe("task-6003 smoke: primary end-to-end flow", () => {
         name: "E2E 太郎",
         kana: "イーツーイー タロウ",
         role: "staff",
-        pin: "4242",
         hire_date: "2026-04-01",
         store_ids: [1],
         hourly_wage: 1200,
@@ -162,13 +161,13 @@ describe("task-6003 smoke: primary end-to-end flow", () => {
     expect(created.employee.store_ids).toEqual([1]);
     const staffId = created.employee.id;
 
-    // 4. PIN login as the newly created staff
-    const pinLogin = await req("/api/auth/pin-login", {
+    // 4. kiosk login as the newly created staff
+    const kioskLogin = await req("/api/auth/kiosk-login", {
       method: "POST",
-      body: JSON.stringify({ employee_id: staffId, pin: "4242" }),
+      body: JSON.stringify({ employee_id: staffId }),
     });
-    expect(pinLogin.status).toBe(200);
-    const staffCookie = extractSid(pinLogin);
+    expect(kioskLogin.status).toBe(200);
+    const staffCookie = extractSid(kioskLogin);
 
     // 5. clock_in
     const clockIn = await req("/api/punches", {

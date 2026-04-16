@@ -140,7 +140,6 @@ describe("task-4007 done_when (HTTP)", () => {
         name: "山田太郎",
         kana: "ヤマダタロウ",
         role: "staff",
-        pin: "1234",
         hire_date: "2026-01-01",
         store_ids: [s.storeId],
       }),
@@ -175,7 +174,6 @@ describe("task-4007 done_when (HTTP)", () => {
         name: "X",
         kana: "X",
         role: "staff",
-        pin: "1234",
         hire_date: "2026-01-01",
         store_ids: [s.storeId],
       }),
@@ -193,7 +191,6 @@ describe("task-4007 done_when (HTTP)", () => {
         name: "A",
         kana: "A",
         role: "staff",
-        pin: "1234",
         hire_date: "2026-01-01",
         store_ids: [s.storeId],
       }),
@@ -222,7 +219,6 @@ describe("task-4007 done_when (HTTP)", () => {
         name: "R",
         kana: "R",
         role: "staff",
-        pin: "1234",
         hire_date: "2026-01-01",
         store_ids: [s.storeId],
       }),
@@ -262,47 +258,6 @@ describe("task-4007 done_when (HTTP)", () => {
       employees: { id: number }[];
     };
     expect(listAllJson.employees.some((e) => e.id === employee.id)).toBe(true);
-  });
-
-  it("POST /api/employees/:id/pin updates pin hash", async () => {
-    const s = seed();
-    const create = await req("/api/employees", {
-      method: "POST",
-      sid: s.adminSid,
-      body: JSON.stringify({
-        name: "P",
-        kana: "P",
-        role: "staff",
-        pin: "1234",
-        hire_date: "2026-01-01",
-        store_ids: [s.storeId],
-      }),
-    });
-    const { employee } = (await create.json()) as { employee: { id: number } };
-    const beforeRow = db
-      .select()
-      .from(schema.employees)
-      .all()
-      .find((e) => e.id === employee.id);
-    expect(beforeRow).toBeTruthy();
-    const beforeHash = beforeRow?.pinHash;
-
-    const r = await req(`/api/employees/${employee.id}/pin`, {
-      method: "POST",
-      sid: s.adminSid,
-      body: JSON.stringify({ pin: "5678" }),
-    });
-    expect(r.status).toBe(200);
-
-    const afterRow = db
-      .select()
-      .from(schema.employees)
-      .all()
-      .find((e) => e.id === employee.id);
-    expect(afterRow?.pinHash).toBeTruthy();
-    expect(afterRow?.pinHash).not.toBe(beforeHash);
-    // new pin must verify
-    expect(bcrypt.compareSync("5678", afterRow?.pinHash ?? "")).toBe(true);
   });
 
   it("store CRUD: admin create/patch work, staff create returns 403, audits recorded", async () => {

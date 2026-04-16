@@ -15,12 +15,12 @@ process.env.HANARE_DB_PATH = TMP_DB_PATH;
 // Dynamic imports so the env var above is honoured.
 const { db, schema } = await import("../../src/server/db/client.js");
 const {
-  MAX_PIN_FAIL_COUNT,
-  PIN_LOCK_DURATION_MS,
+  MAX_AUTH_FAIL_COUNT,
+  AUTH_LOCK_DURATION_MS,
   getEmployeeProfile,
   listPublicEmployees,
+  startKioskSession,
   verifyAdminLogin,
-  verifyPin,
 } = await import("../../src/server/services/auth.js");
 
 function applyMigrations(): void {
@@ -132,97 +132,6 @@ beforeEach(() => {
   clearTables();
 });
 
-describe("verifyPin", () => {
-  it("returns ok with employee profile and store_ids on success", () => {
-    seedStore(1, "S1");
-    seedStore(2, "S2");
-    const empId = seedEmployee({ pin: "9999", storeIds: [1, 2] });
-
-    const result = verifyPin(empId, "9999");
-    expect(result.kind).toBe("ok");
-    if (result.kind === "ok") {
-      expect(result.employee.id).toBe(empId);
-      expect(result.employee.role).toBe("staff");
-      expect(result.employee.store_ids.sort()).toEqual([1, 2]);
-    }
-  });
-
-  it("clears pin_fail_count and lock_until on successful login", () => {
-    const empId = seedEmployee({
-      pin: "1111",
-      pinFailCount: 3,
-      lockUntil: null,
-    });
-    const result = verifyPin(empId, "1111");
-    expect(result.kind).toBe("ok");
-
-    const row = db
-      .select()
-      .from(schema.employees)
-      .where(eqHelper(schema.employees.id, empId))
-      .get();
-    expect(row?.pinFailCount).toBe(0);
-    expect(row?.lockUntil).toBeNull();
-  });
-
-  it("returns invalid_pin and increments fail count on wrong pin", () => {
-    const empId = seedEmployee({ pin: "1111" });
-    const result = verifyPin(empId, "9999");
-    expect(result.kind).toBe("invalid_pin");
-    if (result.kind === "invalid_pin") {
-      expect(result.remaining).toBe(MAX_PIN_FAIL_COUNT - 1);
-    }
-    const row = db
-      .select()
-      .from(schema.employees)
-      .where(eqHelper(schema.employees.id, empId))
-      .get();
-    expect(row?.pinFailCount).toBe(1);
-  });
-
-  it("locks the account when reaching MAX_PIN_FAIL_COUNT", () => {
-    const empId = seedEmployee({
-      pin: "1111",
-      pinFailCount: MAX_PIN_FAIL_COUNT - 1,
-    });
-    const now = 1_700_000_000_000;
-    const result = verifyPin(empId, "0000", now);
-    expect(result.kind).toBe("locked");
-    if (result.kind === "locked") {
-      expect(result.lock_until).toBe(now + PIN_LOCK_DURATION_MS);
-    }
-
-    const row = db
-      .select()
-      .from(schema.employees)
-      .where(eqHelper(schema.employees.id, empId))
-      .get();
-    expect(row?.pinFailCount).toBe(0);
-    expect(row?.lockUntil).toBe(now + PIN_LOCK_DURATION_MS);
-  });
-
-  it("returns locked while lock_until is in the future, even with correct pin", () => {
-    const future = Date.now() + 60_000;
-    const empId = seedEmployee({ pin: "1111", lockUntil: future });
-    const result = verifyPin(empId, "1111");
-    expect(result.kind).toBe("locked");
-    if (result.kind === "locked") {
-      expect(result.lock_until).toBe(future);
-    }
-  });
-
-  it("returns not_found for unknown employees", () => {
-    const result = verifyPin(99999, "0000");
-    expect(result.kind).toBe("not_found");
-  });
-
-  it("treats retired employees as not_found", () => {
-    const empId = seedEmployee({ pin: "1111", retireDate: "2024-12-31" });
-    const result = verifyPin(empId, "1111");
-    expect(result.kind).toBe("not_found");
-  });
-});
-
 describe("verifyAdminLogin", () => {
   it("returns ok for matching admin credentials", () => {
     seedStore(1, "S1");
@@ -274,18 +183,18 @@ describe("verifyAdminLogin", () => {
     expect(row?.pinFailCount).toBe(1);
   });
 
-  it("locks admin account after MAX_PIN_FAIL_COUNT failures", () => {
+  it("locks admin account after MAX_AUTH_FAIL_COUNT failures", () => {
     seedEmployee({
       role: "admin",
       loginId: "admin",
       password: "secret",
-      pinFailCount: MAX_PIN_FAIL_COUNT - 1,
+      pinFailCount: MAX_AUTH_FAIL_COUNT - 1,
     });
     const now = 1_700_000_000_000;
     const result = verifyAdminLogin("admin", "wrong", now);
     expect(result.kind).toBe("locked");
     if (result.kind === "locked") {
-      expect(result.lock_until).toBe(now + PIN_LOCK_DURATION_MS);
+      expect(result.lock_until).toBe(now + AUTH_LOCK_DURATION_MS);
     }
   });
 
@@ -342,6 +251,35 @@ describe("listPublicEmployees", () => {
     const filtered = listPublicEmployees(1);
     const names = filtered.map((e) => e.name).sort();
     expect(names).toEqual(["BothStores", "OnlyStore1"]);
+  });
+});
+
+describe("startKioskSession", () => {
+  it("returns the selected employee profile directly for kiosk punching", () => {
+    seedStore(1, "S1");
+    const empId = seedEmployee({
+      role: "staff",
+      name: "打刻 花子",
+      kana: "ダコク ハナコ",
+      storeIds: [1],
+    });
+
+    const result = startKioskSession(empId);
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.employee.id).toBe(empId);
+      expect(result.employee.name).toBe("打刻 花子");
+      expect(result.employee.store_ids).toEqual([1]);
+    }
+  });
+
+  it("rejects retired employees", () => {
+    const empId = seedEmployee({
+      retireDate: "2024-12-31",
+    });
+
+    const result = startKioskSession(empId);
+    expect(result.kind).toBe("not_found");
   });
 });
 

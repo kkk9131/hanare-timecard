@@ -5,7 +5,6 @@ export { EmployeeTile } from "./EmployeeTile";
 export { Heading } from "./Heading";
 export { Logo } from "./Logo";
 export { Modal } from "./Modal";
-export { PinPad } from "./PinPad";
 export { ShojiTransition } from "./ShojiTransition";
 export { Inline, Stack } from "./Stack";
 export { StatePill } from "./StatePill";

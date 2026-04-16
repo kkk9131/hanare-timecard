@@ -17,12 +17,11 @@ import type {
   listShiftRequestsQuerySchema,
   listShiftsQuerySchema,
   myPunchesQuerySchema,
-  pinLoginSchema,
+  kioskLoginSchema,
   publishShiftSchema,
   punchSourceSchema,
   punchTypeSchema,
   rejectCorrectionSchema,
-  resetPinSchema,
   retireEmployeeSchema,
   reviewCorrectionSchema,
   roleSchema,
@@ -173,7 +172,7 @@ export interface MonthlySummary {
 
 // ---------- API request types (derived from zod) ----------
 
-export type PinLoginInput = z.infer<typeof pinLoginSchema>;
+export type KioskLoginInput = z.infer<typeof kioskLoginSchema>;
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
@@ -181,7 +180,6 @@ export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
-export type ResetPinInput = z.infer<typeof resetPinSchema>;
 export type RetireEmployeeInput = z.infer<typeof retireEmployeeSchema>;
 export type ListEmployeesQuery = z.infer<typeof listEmployeesQuerySchema>;
 
@@ -210,7 +208,7 @@ export type ListAuditQuery = z.infer<typeof listAuditQuerySchema>;
 
 // ---------- API response shapes ----------
 
-export interface PinLoginResponse {
+export interface KioskLoginResponse {
   employee: Employee;
   session_expires_at: number;
 }

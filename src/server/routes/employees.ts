@@ -3,7 +3,6 @@ import { HTTPException } from "hono/http-exception";
 import {
   createEmployeeSchema,
   listEmployeesQuerySchema,
-  resetPinSchema,
   retireEmployeeSchema,
   updateEmployeeSchema,
 } from "../../shared/schemas.js";
@@ -14,7 +13,6 @@ import {
   EmployeeServiceError,
   getEmployee,
   listEmployees,
-  resetPin,
   retireEmployee,
   updateEmployee,
 } from "../services/employees.js";
@@ -124,32 +122,6 @@ employeesRoutes.patch("/:id", requireRole("admin"), async (c) => {
     if (handled) return c.json(handled.body, handled.status as 400 | 404 | 409 | 422);
     throw e;
   }
-});
-
-/** POST /api/employees/:id/pin  (admin) — PIN リセット */
-employeesRoutes.post("/:id/pin", requireRole("admin"), async (c) => {
-  const id = Number.parseInt(c.req.param("id"), 10);
-  if (!Number.isFinite(id) || id <= 0) {
-    return c.json({ error: "bad_request", message: "id が不正です" }, 400);
-  }
-  const raw = await c.req.json().catch(() => null);
-  const parsed = resetPinSchema.safeParse(raw);
-  if (!parsed.success) {
-    return c.json(
-      {
-        error: "bad_request",
-        message: "PIN が不正です",
-        details: parsed.error.flatten(),
-      },
-      400,
-    );
-  }
-  const user = c.get("user");
-  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
-
-  const emp = resetPin(id, parsed.data.pin, user.employeeId);
-  if (!emp) return c.json({ error: "not_found", message: "従業員が見つかりません" }, 404);
-  return c.json({ employee: emp });
 });
 
 /** POST /api/employees/:id/retire  (admin) */

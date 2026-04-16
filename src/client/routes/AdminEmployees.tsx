@@ -6,7 +6,6 @@ import {
   type Employee,
   listEmployees,
   listStores,
-  resetEmployeePin,
   retireEmployee,
   type Store,
   type UpdateEmployeeBody,
@@ -43,7 +42,6 @@ function todayISO(): string {
 
 type FormMode = { kind: "create" } | { kind: "edit"; employee: Employee } | null;
 
-type PinModalState = { employee: Employee; pin: string } | null;
 type RetireModalState = { employee: Employee } | null;
 type ToastState = {
   tone: "info" | "success" | "danger";
@@ -56,7 +54,6 @@ type FormState = {
   role: "staff" | "manager" | "admin";
   login_id: string;
   password: string;
-  pin: string;
   hourly_wage: string;
   hire_date: string;
   store_ids: number[];
@@ -72,7 +69,6 @@ function emptyForm(stores: Store[]): FormState {
     role: "staff",
     login_id: "",
     password: "",
-    pin: "",
     hourly_wage: "",
     hire_date: todayISO(),
     store_ids: first ? [first] : [],
@@ -88,7 +84,6 @@ function fromEmployee(e: Employee): FormState {
     role: e.role,
     login_id: e.login_id ?? "",
     password: "",
-    pin: "",
     hourly_wage: e.hourly_wage != null ? String(e.hourly_wage) : "",
     hire_date: e.hire_date ?? todayISO(),
     store_ids: e.store_ids ?? [],
@@ -104,7 +99,6 @@ export function AdminEmployeesPage() {
   const [includeRetired, setIncludeRetired] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [form, setForm] = useState<FormState | null>(null);
-  const [pinModal, setPinModal] = useState<PinModalState>(null);
   const [retireModal, setRetireModal] = useState<RetireModalState>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -166,19 +160,6 @@ export function AdminEmployeesPage() {
     },
   });
 
-  const pinMutation = useMutation({
-    mutationFn: (input: { id: number; pin: string }) =>
-      resetEmployeePin(input.id, { pin: input.pin }),
-    onSuccess: () => {
-      setToast({ tone: "success", message: "PIN を再設定しました。" });
-      setPinModal(null);
-      qc.invalidateQueries({ queryKey: ["employees"] });
-    },
-    onError: () => {
-      setToast({ tone: "danger", message: "PIN の再設定に失敗しました。" });
-    },
-  });
-
   const retireMutation = useMutation({
     mutationFn: (input: { id: number; date: string }) =>
       retireEmployee(input.id, { retire_date: input.date }),
@@ -216,7 +197,6 @@ export function AdminEmployeesPage() {
         name: form.name.trim(),
         kana: form.kana.trim(),
         role: form.role,
-        pin: form.pin,
         hourly_wage: form.hourly_wage ? Number(form.hourly_wage) : 0,
         hire_date: form.hire_date,
         store_ids: form.store_ids,
@@ -352,13 +332,6 @@ export function AdminEmployeesPage() {
                       <SumiButton variant="ghost" size="sm" onClick={() => openEdit(e)}>
                         編集
                       </SumiButton>
-                      <SumiButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPinModal({ employee: e, pin: "" })}
-                      >
-                        PIN リセット
-                      </SumiButton>
                       {!retired ? (
                         <SumiButton
                           variant="danger"
@@ -460,18 +433,6 @@ export function AdminEmployeesPage() {
                   onChange={(e) => setForm({ ...form, hire_date: e.target.value })}
                 />
               </label>
-              {formMode?.kind === "create" ? (
-                <label className="wa-emp__field">
-                  <span>PIN (4-6 桁)</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]{4,6}"
-                    value={form.pin}
-                    onChange={(e) => setForm({ ...form, pin: e.target.value })}
-                  />
-                </label>
-              ) : null}
               {form.role !== "staff" ? (
                 <>
                   <label className="wa-emp__field">
@@ -549,51 +510,6 @@ export function AdminEmployeesPage() {
               />
             </label>
           </div>
-        ) : null}
-      </Modal>
-
-      {/* ---- PIN リセット モーダル ---- */}
-      <Modal
-        open={pinModal !== null}
-        onClose={() => setPinModal(null)}
-        eyebrow="鍵"
-        title="PIN を再設定"
-        footer={
-          <>
-            <SumiButton variant="ghost" onClick={() => setPinModal(null)}>
-              取り消し
-            </SumiButton>
-            <SumiButton
-              variant="primary"
-              disabled={!pinModal || !/^[0-9]{4,6}$/.test(pinModal.pin) || pinMutation.isPending}
-              onClick={() => {
-                if (!pinModal) return;
-                pinMutation.mutate({
-                  id: pinModal.employee.id,
-                  pin: pinModal.pin,
-                });
-              }}
-            >
-              再設定する
-            </SumiButton>
-          </>
-        }
-      >
-        {pinModal ? (
-          <>
-            <p className="wa-emp__modalLead">
-              {pinModal.employee.name}さんの新しい PIN を入力してください（4〜6 桁の数字）。
-            </p>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]{4,6}"
-              className="wa-emp__pinInput tnum"
-              value={pinModal.pin}
-              onChange={(e) => setPinModal({ ...pinModal, pin: e.target.value })}
-              aria-label="新しい PIN"
-            />
-          </>
         ) : null}
       </Modal>
 

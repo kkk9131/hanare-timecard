@@ -21,15 +21,14 @@ import {
   EmployeeShiftRequestsPage,
   EmployeeShiftsPage,
 } from "./routes/employee";
-import { KioskBoardPage, KioskDonePage, KioskPinPage, KioskTopPage } from "./routes/kiosk";
+import { KioskBoardPage, KioskDonePage, KioskTopPage } from "./routes/kiosk";
 
 export function App() {
   return (
     <Routes>
-      {/* 公開 / 打刻系 (K01, K02) */}
+      {/* 公開 / 打刻系 (K01) */}
       <Route element={<PunchLayout />}>
         <Route path="/" element={<KioskTopPage />} />
-        <Route path="/punch/pin" element={<KioskPinPage />} />
       </Route>
 
       {/* staff session 必須 打刻系 (K03, K04) */}

@@ -6,15 +6,15 @@ import { expect, test } from "@playwright/test";
  *
  * Walks the 10 primary steps required by the verify ticket against a real
  * Hono server booted by `playwright.config.ts` (`webServer`) and the seeded
- * SQLite DB (`oyakata/hanare2026`, 雀庵, staff PIN 1001 / admin PIN 9999).
+ * SQLite DB (`oyakata/hanare2026`, 雀庵, 氏名選択打刻 / 管理者ログイン).
  *
  * Steps:
  *   1. K01 open → tile visible
  *   2. K01 select staff tile (山田 太郎 / 1001)
- *   3. K02 PIN entry → K03
+ *   3. K01 からそのまま K03
  *   4. K03 出勤する → confirm → K04
  *   5. K04 → auto-back to K01
- *   6. K01 same staff → PIN → K03
+ *   6. K01 same staff → そのまま K03
  *   7. K03 退勤する → confirm → K04
  *   8. /admin/login → oyakata / hanare2026 → /admin dashboard
  *   9. dashboard 「現在勤務中の従業員」 KPI visible
@@ -22,16 +22,8 @@ import { expect, test } from "@playwright/test";
  */
 
 const STAFF_NAME = "山田 太郎";
-const STAFF_PIN = "1001";
 const ADMIN_LOGIN_ID = "oyakata";
 const ADMIN_PASSWORD = "hanare2026";
-
-async function enterPin(page: import("@playwright/test").Page, pin: string) {
-  for (const ch of pin) {
-    await page.getByRole("button", { name: `数字 ${ch}` }).click();
-  }
-  await page.getByRole("button", { name: "決定" }).click();
-}
 
 test.describe("task-6003 smoke", () => {
   test("kiosk punch in/out + admin login + export download", async ({
@@ -53,12 +45,7 @@ test.describe("task-6003 smoke", () => {
     // ---- Step 2: K01 select staff tile ----
     await staffTile.first().click();
 
-    // ---- Step 3: K02 PIN entry → K03 ----
-    await expect(page).toHaveURL(/\/punch\/pin$/);
-    await expect(
-      page.getByRole("heading", { name: new RegExp(STAFF_NAME) }),
-    ).toBeVisible();
-    await enterPin(page, STAFF_PIN);
+    // ---- Step 3: K01 からそのまま K03 ----
     await expect(page).toHaveURL(/\/punch\/board$/, { timeout: 10_000 });
 
     // ---- Step 4: 出勤する → confirm → K04 ----
@@ -81,13 +68,11 @@ test.describe("task-6003 smoke", () => {
       page.getByRole("heading", { name: /ようこそ、雀庵へ/ }),
     ).toBeVisible();
 
-    // ---- Step 6: K01 → same staff → PIN → K03 ----
+    // ---- Step 6: K01 → same staff → K03 ----
     await page
       .getByRole("button", { name: new RegExp(STAFF_NAME) })
       .first()
       .click();
-    await expect(page).toHaveURL(/\/punch\/pin$/);
-    await enterPin(page, STAFF_PIN);
     await expect(page).toHaveURL(/\/punch\/board$/, { timeout: 10_000 });
 
     // ---- Step 7: 退勤する → confirm → K04 ----

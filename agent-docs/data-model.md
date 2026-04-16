@@ -43,7 +43,7 @@ CREATE TABLE employees (
   role           TEXT NOT NULL CHECK(role IN ('staff','manager','admin')),
   login_id       TEXT UNIQUE,                -- manager/admin のみ
   password_hash  TEXT,                       -- manager/admin のみ
-  pin_hash       TEXT NOT NULL,              -- 全員 (4-6桁 PIN bcrypt)
+  pin_hash       TEXT NOT NULL,              -- 旧PIN互換のための内部保持列
   hourly_wage    INTEGER NOT NULL DEFAULT 0,
   hire_date      TEXT NOT NULL,              -- 'YYYY-MM-DD'
   retire_date    TEXT,
