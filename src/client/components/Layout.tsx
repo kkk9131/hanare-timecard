@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
+import { storeShortLabel } from "../lib/storeLabels";
+import { useKioskStore } from "../state/kioskStore";
 import { AppShell } from "./ui/AppShell";
 import { StatePill } from "./ui/StatePill";
 import { SumiButton } from "./ui/SumiButton";
@@ -15,8 +17,17 @@ type LayoutProps = {
  * 縦組ロゴ風ヘッダー + 墨黒背景。
  */
 export function PunchLayout({ children }: LayoutProps) {
+  const storeFilter = useKioskStore((s) => s.storeFilter);
+  const activeStoreId = useKioskStore((s) => s.activeStoreId);
+  const storeName =
+    activeStoreId != null
+      ? storeShortLabel(activeStoreId)
+      : storeFilter === "all"
+        ? "本店"
+        : storeShortLabel(storeFilter);
+
   return (
-    <AppShell storeName="本店" headerRight={<StatePill tone="info" label="打刻端末" />}>
+    <AppShell storeName={storeName} headerRight={<StatePill tone="info" label="打刻端末" />}>
       {children ?? <Outlet />}
     </AppShell>
   );

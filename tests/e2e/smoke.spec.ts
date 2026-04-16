@@ -16,7 +16,7 @@ import { expect, test } from "@playwright/test";
  *   5. K04 → auto-back to K01
  *   6. K01 same staff → そのまま K03
  *   7. K03 退勤する → confirm → K04
- *   8. /admin/login → oyakata / hanare2026 → /admin dashboard
+ *   8. トップ画面から管理者ログイン画面へ → oyakata / hanare2026 → /admin dashboard
  *   9. dashboard 「現在勤務中の従業員」 KPI visible
  *  10. /admin/exports → 「今月をエクスポート」 → download capture (.xlsx, size > 0)
  */
@@ -26,17 +26,12 @@ const ADMIN_LOGIN_ID = "oyakata";
 const ADMIN_PASSWORD = "hanare2026";
 
 test.describe("task-6003 smoke", () => {
-  test("kiosk punch in/out + admin login + export download", async ({
-    page,
-    context,
-  }) => {
+  test("kiosk punch in/out + admin login + export download", async ({ page, context }) => {
     test.setTimeout(120_000);
 
     // ---- Step 1: K01 open ----
     await page.goto("/");
-    await expect(
-      page.getByRole("heading", { name: /ようこそ、雀庵へ/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
     const staffTile = page.getByRole("button", {
       name: new RegExp(`${STAFF_NAME}`),
     });
@@ -56,17 +51,13 @@ test.describe("task-6003 smoke", () => {
     await expect(page.getByRole("dialog", { name: "確認" })).toBeVisible();
     await page.getByRole("button", { name: "はい、記録します" }).click();
     await expect(page).toHaveURL(/\/punch\/done$/, { timeout: 10_000 });
-    await expect(
-      page.getByRole("heading", { name: /記録しました/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /記録しました/ })).toBeVisible();
 
     // ---- Step 5: K04 → auto-back to K01 ----
     await expect(page).toHaveURL(/\/$|\/$/, { timeout: 15_000 });
     // confirm we landed back at the kiosk top
     await page.waitForURL("**/", { timeout: 15_000 });
-    await expect(
-      page.getByRole("heading", { name: /ようこそ、雀庵へ/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
 
     // ---- Step 6: K01 → same staff → K03 ----
     await page
@@ -82,23 +73,22 @@ test.describe("task-6003 smoke", () => {
     await expect(page.getByRole("dialog", { name: "確認" })).toBeVisible();
     await page.getByRole("button", { name: "はい、記録します" }).click();
     await expect(page).toHaveURL(/\/punch\/done$/, { timeout: 10_000 });
-    await expect(
-      page.getByRole("heading", { name: /記録しました/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /記録しました/ })).toBeVisible();
 
     // wait for auto-logout to land back on K01 before switching contexts
     await page.waitForURL("**/", { timeout: 15_000 });
-    await expect(
-      page.getByRole("heading", { name: /ようこそ、雀庵へ/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
 
-    // ---- Step 8: /admin/login (use a fresh context to isolate session cookies) ----
-    const adminContext = await context.browser()!.newContext();
+    // ---- Step 8: トップ画面から /admin/login ----
+    const browser = context.browser();
+    if (!browser) {
+      throw new Error("browser context is not available");
+    }
+    const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
-    await adminPage.goto("/admin/login");
-    await expect(
-      adminPage.getByRole("heading", { name: /雀庵 管理画面/ }),
-    ).toBeVisible();
+    await adminPage.goto("/");
+    await adminPage.getByRole("button", { name: "管理者画面へ" }).click();
+    await expect(adminPage.getByRole("heading", { name: /雀庵 管理画面/ })).toBeVisible();
     await adminPage.locator('input[name="login_id"]').fill(ADMIN_LOGIN_ID);
     await adminPage.locator('input[name="password"]').fill(ADMIN_PASSWORD);
     await adminPage.getByRole("button", { name: "管理者ログイン" }).click();
@@ -109,20 +99,18 @@ test.describe("task-6003 smoke", () => {
     // ("現在勤務中" or similar) is on the page.
     await expect(
       adminPage.getByText(/現在.*勤務中|勤務中.*従業員|本日の打刻/i).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    ).toBeVisible({
+      timeout: 15_000,
+    });
 
     // ---- Step 10: /admin/exports → 今月をエクスポート → download capture ----
     await adminPage.goto("/admin/exports");
-    await expect(
-      adminPage.getByRole("heading", { name: /勤怠を巻き取る/ }),
-    ).toBeVisible();
+    await expect(adminPage.getByRole("heading", { name: /勤怠を巻き取る/ })).toBeVisible();
 
     const downloadPromise = adminPage.waitForEvent("download", {
       timeout: 30_000,
     });
-    await adminPage
-      .getByRole("button", { name: "今月分の勤怠をxlsxでダウンロード" })
-      .click();
+    await adminPage.getByRole("button", { name: "今月分の勤怠をxlsxでダウンロード" }).click();
     const download = await downloadPromise;
 
     const suggested = download.suggestedFilename();
@@ -130,7 +118,10 @@ test.describe("task-6003 smoke", () => {
 
     const savedPath = await download.path();
     expect(savedPath).toBeTruthy();
-    const fileStat = await stat(savedPath!);
+    if (!savedPath) {
+      throw new Error("download path was not resolved");
+    }
+    const fileStat = await stat(savedPath);
     expect(fileStat.size).toBeGreaterThan(0);
 
     await adminContext.close();

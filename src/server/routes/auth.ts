@@ -3,7 +3,12 @@ import { HTTPException } from "hono/http-exception";
 import { adminLoginSchema, kioskLoginSchema } from "../../shared/schemas.js";
 import { requireAuth } from "../middleware/auth.js";
 import { createSession, destroySession, type HonoVariables } from "../middleware/session.js";
-import { getEmployeeProfile, listPublicEmployees, startKioskSession, verifyAdminLogin } from "../services/auth.js";
+import {
+  getEmployeeProfile,
+  listPublicEmployees,
+  startKioskSession,
+  verifyAdminLogin,
+} from "../services/auth.js";
 
 export const authRoutes = new Hono<{ Variables: HonoVariables }>();
 

@@ -1,7 +1,7 @@
 import "./Logo.css";
 
 type LogoProps = {
-  /** 店舗サブタイトル: 例 "本店" / "はなれ" */
+  /** 店舗サブタイトル: 例 "本店" / "離れ" */
   subtitle?: string;
   /** 縦組 (vertical-rl) で表示する */
   vertical?: boolean;
@@ -11,7 +11,7 @@ type LogoProps = {
 
 /**
  * 「雀庵」ロゴ。縦組み時は writing-mode: vertical-rl を用いる。
- * subtitle は店舗サブ識別 (本店 / はなれ) を想定。
+ * subtitle は店舗サブ識別 (本店 / 離れ) を想定。
  */
 export function Logo({ subtitle, vertical = false, size = "md" }: LogoProps) {
   return (

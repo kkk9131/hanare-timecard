@@ -44,9 +44,9 @@ type ToastState = {
 function storeBadgeLabel(store: Store): string {
   const code = store.code.trim().toLowerCase();
   if (["jakuan", "zyakuan", "zyakuann", "suzumean"].includes(code)) return "本店";
-  if (code === "hanare") return "はなれ";
+  if (code === "hanare") return "離れ";
   if (store.display_name.includes("本店")) return "本店";
-  if (store.display_name.includes("はなれ")) return "はなれ";
+  if (store.display_name.includes("離れ") || store.display_name.includes("はなれ")) return "離れ";
   return "店舗";
 }
 

@@ -12,7 +12,7 @@ type StoreSwitcherProps = {
 };
 
 /**
- * 店舗切替タブ。雀庵 / 雀庵はなれ / 全店舗。
+ * 店舗切替タブ。本店 / 離れ / 全店舗。
  * 色だけに頼らず選択中はアンダーラインと aria-pressed で示す。
  */
 export function StoreSwitcher({ stores, value, onChange, includeAll = true }: StoreSwitcherProps) {

@@ -1,3 +1,5 @@
+export const KNOWN_STORE_IDS = [1, 2] as const;
+
 /**
  * 店舗 ID → 表示名のヒューリスティックなマップ。
  *
@@ -7,7 +9,7 @@
  */
 const FALLBACK_NAMES: Record<number, string> = {
   1: "雀庵 本店",
-  2: "雀庵はなれ",
+  2: "雀庵 離れ",
 };
 
 export function storeLabel(id: number): string {
@@ -16,8 +18,8 @@ export function storeLabel(id: number): string {
 
 export function storeShortLabel(id: number): string {
   const full = storeLabel(id);
-  // 「雀庵 本店」→「本店」, 「雀庵はなれ」→「はなれ」
+  // 「雀庵 本店」→「本店」, 「雀庵 離れ」→「離れ」
   if (full === "雀庵 本店") return "本店";
-  if (full === "雀庵はなれ") return "はなれ";
+  if (full === "雀庵 離れ") return "離れ";
   return full;
 }

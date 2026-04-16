@@ -68,8 +68,8 @@ const STORES: StoreSeed[] = [
   },
   {
     code: "hanare",
-    name: "雀庵はなれ",
-    displayName: "雀庵はなれ",
+    name: "雀庵 離れ",
+    displayName: "雀庵 離れ",
     openingTime: "17:00",
     closingTime: "23:30",
     closedDays: "mon",
@@ -103,7 +103,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
-    name: "はなれ 店長",
+    name: "離れ 店長",
     kana: "はなれ てんちょう",
     role: "manager",
     loginId: "hanare_mgr",
