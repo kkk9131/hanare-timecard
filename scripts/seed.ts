@@ -60,7 +60,7 @@ interface EmployeeSeed {
 
 const STORES: StoreSeed[] = [
   {
-    code: "jakuan",
+    code: "suzumean",
     name: "雀庵",
     displayName: "雀庵 本店",
     openingTime: "17:00",
@@ -89,7 +89,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     hireDate: "2020-01-01",
     note: "オーナー",
     stores: [
-      { code: "jakuan", isPrimary: true },
+      { code: "suzumean", isPrimary: true },
       { code: "hanare", isPrimary: false },
     ],
   },
@@ -97,13 +97,13 @@ const EMPLOYEES: EmployeeSeed[] = [
     name: "本店 店長",
     kana: "ほんてん てんちょう",
     role: "manager",
-    loginId: "jakuan_mgr",
-    password: "jakuan2026",
+    loginId: "suzumean_mgr",
+    password: "suzumean2026",
     pin: "1111",
     hourlyWage: 1500,
     hireDate: "2021-04-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "はなれ 店長",
@@ -127,7 +127,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     hourlyWage: 1200,
     hireDate: "2023-06-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "佐藤 花子",
@@ -139,7 +139,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     hourlyWage: 1200,
     hireDate: "2023-07-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "鈴木 次郎",
@@ -151,7 +151,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     hourlyWage: 1200,
     hireDate: "2023-08-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "田中 美咲",
@@ -200,7 +200,7 @@ const EMPLOYEES: EmployeeSeed[] = [
     hireDate: "2024-01-15",
     note: "両店舗兼務",
     stores: [
-      { code: "jakuan", isPrimary: true },
+      { code: "suzumean", isPrimary: true },
       { code: "hanare", isPrimary: false },
     ],
   },

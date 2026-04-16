@@ -23,7 +23,7 @@ stores    1 ── * shifts
 ```sql
 CREATE TABLE stores (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  code          TEXT NOT NULL UNIQUE,        -- 'jakuan' / 'hanare'
+  code          TEXT NOT NULL UNIQUE,        -- 'suzumean' / 'hanare'
   name          TEXT NOT NULL,               -- '雀庵'
   display_name  TEXT NOT NULL,               -- '雀庵 本店'
   opening_time  TEXT NOT NULL,               -- 'HH:MM'

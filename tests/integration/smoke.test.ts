@@ -47,7 +47,7 @@ function seedMinimal(): { storeId: number; adminId: number } {
   db.insert(schema.stores)
     .values({
       id: 1,
-      code: "jakuan",
+      code: "suzumean",
       name: "雀庵",
       displayName: "雀庵 本店",
       openingTime: "17:00",

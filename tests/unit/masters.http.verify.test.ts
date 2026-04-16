@@ -61,7 +61,7 @@ function seed(): Seed {
   db.insert(schema.stores)
     .values({
       id: 1,
-      code: "jakuan",
+      code: "suzumean",
       name: "雀庵",
       displayName: "雀庵",
       openingTime: "10:00",
