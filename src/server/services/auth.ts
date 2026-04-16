@@ -2,15 +2,15 @@ import bcrypt from "bcrypt";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 
-/** Number of failed PIN attempts before locking the account. */
-export const MAX_PIN_FAIL_COUNT = 5;
+/** Number of failed authentication attempts before locking the account. */
+export const MAX_AUTH_FAIL_COUNT = 5;
 
-/** Lock duration once MAX_PIN_FAIL_COUNT is reached. */
-export const PIN_LOCK_DURATION_MS = 5 * 60 * 1000;
+/** Lock duration once the failed-attempt threshold is reached. */
+export const AUTH_LOCK_DURATION_MS = 5 * 60 * 1000;
 
 export type Role = "staff" | "manager" | "admin";
 
-export interface PinLoginSuccess {
+export interface KioskLoginSuccess {
   kind: "ok";
   employee: {
     id: number;
@@ -21,83 +21,24 @@ export interface PinLoginSuccess {
   };
 }
 
-export interface PinLoginInvalid {
-  kind: "invalid_pin";
-  remaining: number;
-}
-
-export interface PinLoginLocked {
-  kind: "locked";
-  lock_until: number;
-}
-
-export interface PinLoginNotFound {
+export interface KioskLoginNotFound {
   kind: "not_found";
 }
 
-export type PinLoginResult = PinLoginSuccess | PinLoginInvalid | PinLoginLocked | PinLoginNotFound;
+export type KioskLoginResult = KioskLoginSuccess | KioskLoginNotFound;
 
 /**
- * Validate a PIN against the employees table, applying lock-out rules.
- *
- * On failure increments `pin_fail_count`. When the threshold is reached,
- * sets `lock_until = now + PIN_LOCK_DURATION_MS` and resets the counter.
+ * Create a kiosk session from employee selection alone.
+ * Used for shared-device punch flow with no credential entry.
  */
-export function verifyPin(
-  employeeId: number,
-  pin: string,
-  now: number = Date.now(),
-): PinLoginResult {
-  const emp = db.select().from(schema.employees).where(eq(schema.employees.id, employeeId)).get();
-
-  if (!emp) return { kind: "not_found" };
-  if (emp.retireDate != null) return { kind: "not_found" };
-
-  if (emp.lockUntil != null && emp.lockUntil > now) {
-    return { kind: "locked", lock_until: emp.lockUntil };
+export function startKioskSession(employeeId: number): KioskLoginResult {
+  const employee = getEmployeeProfile(employeeId);
+  if (!employee) {
+    return { kind: "not_found" };
   }
-
-  const ok = bcrypt.compareSync(pin, emp.pinHash);
-  if (!ok) {
-    const newCount = emp.pinFailCount + 1;
-    if (newCount >= MAX_PIN_FAIL_COUNT) {
-      const lockUntil = now + PIN_LOCK_DURATION_MS;
-      db.update(schema.employees)
-        .set({ pinFailCount: 0, lockUntil, updatedAt: now })
-        .where(eq(schema.employees.id, employeeId))
-        .run();
-      return { kind: "locked", lock_until: lockUntil };
-    }
-    db.update(schema.employees)
-      .set({ pinFailCount: newCount, updatedAt: now })
-      .where(eq(schema.employees.id, employeeId))
-      .run();
-    return { kind: "invalid_pin", remaining: MAX_PIN_FAIL_COUNT - newCount };
-  }
-
-  // Success: clear counters/locks.
-  if (emp.pinFailCount !== 0 || emp.lockUntil != null) {
-    db.update(schema.employees)
-      .set({ pinFailCount: 0, lockUntil: null, updatedAt: now })
-      .where(eq(schema.employees.id, employeeId))
-      .run();
-  }
-
-  const storeRows = db
-    .select({ storeId: schema.employeeStores.storeId })
-    .from(schema.employeeStores)
-    .where(eq(schema.employeeStores.employeeId, employeeId))
-    .all();
-
   return {
     kind: "ok",
-    employee: {
-      id: emp.id,
-      name: emp.name,
-      kana: emp.kana,
-      role: emp.role as Role,
-      store_ids: storeRows.map((r) => r.storeId),
-    },
+    employee,
   };
 }
 
@@ -125,7 +66,7 @@ export type AdminLoginResult = AdminLoginSuccess | AdminLoginInvalid | AdminLogi
 
 /**
  * Validate an admin/manager login_id + password combination.
- * Reuses the same fail-count + lockout machinery as PIN login.
+ * Reuses the employees table fail-count + lockout columns.
  */
 export function verifyAdminLogin(
   loginId: string,
@@ -145,8 +86,8 @@ export function verifyAdminLogin(
   const ok = bcrypt.compareSync(password, emp.passwordHash);
   if (!ok) {
     const newCount = emp.pinFailCount + 1;
-    if (newCount >= MAX_PIN_FAIL_COUNT) {
-      const lockUntil = now + PIN_LOCK_DURATION_MS;
+    if (newCount >= MAX_AUTH_FAIL_COUNT) {
+      const lockUntil = now + AUTH_LOCK_DURATION_MS;
       db.update(schema.employees)
         .set({ pinFailCount: 0, lockUntil, updatedAt: now })
         .where(eq(schema.employees.id, emp.id))
@@ -232,6 +173,7 @@ export function getEmployeeProfile(employeeId: number): {
 } | null {
   const emp = db.select().from(schema.employees).where(eq(schema.employees.id, employeeId)).get();
   if (!emp) return null;
+  if (emp.retireDate != null) return null;
   const storeRows = db
     .select({ storeId: schema.employeeStores.storeId })
     .from(schema.employeeStores)

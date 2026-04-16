@@ -16,7 +16,7 @@
 | 状態管理       | TanStack Query (server state) + Zustand (UI)    |
 | DB             | SQLite (better-sqlite3, 同期 API)               |
 | ORM            | Drizzle ORM + drizzle-kit (migration)           |
-| 認証           | セッション Cookie (HMAC 署名) + bcrypt (PIN/PW) |
+| 認証           | セッション Cookie + bcrypt (管理者パスワード)   |
 | Excel          | exceljs                                         |
 | CSV            | 自前実装 (UTF-8 BOM + CRLF)                     |
 | バリデーション | zod                                             |
@@ -112,12 +112,12 @@ hanare-timecard/
 
 ## 認証セッション方式
 
-- 共用端末向け従業員 PIN ログイン: ログイン成功時に 5 分有効の Cookie セッション発行 → 打刻完了で即破棄
+- 共用端末向け打刻: 氏名選択で 5 分有効の Cookie セッション発行 → 打刻完了で即破棄
 - 管理者 ID/PW: 2 時間有効の Cookie セッション (sliding 更新)
 - セッション保存: SQLite `sessions` テーブル (id, user_id, role, expires_at)
 - Cookie: HttpOnly, SameSite=Lax, Secure は TLS 時のみ
 - bcrypt cost = 10
-- PIN 5 回連続失敗で `employee.lock_until` を 5 分先に設定
+- 管理者ログイン失敗が続いた場合は `employee.lock_until` を 5 分先に設定
 
 ## バックアップ方式
 
@@ -128,7 +128,7 @@ hanare-timecard/
 
 ## テスト方針
 
-- **unit (vitest)**: `lib/time.ts` の日跨ぎ・深夜計算、集計関数、CSV/xlsx 生成、PIN 認証ロックロジック
+- **unit (vitest)**: `lib/time.ts` の日跨ぎ・深夜計算、集計関数、CSV/xlsx 生成、管理者認証ロックロジック
 - **integration (vitest)**: Hono ルートを `app.request()` で直接叩いてレスポンス検証 (in-memory SQLite)
 - **E2E (Playwright)**: スモーク 1 本のみ。打刻 → 履歴閲覧 → 管理者ログイン → エクスポートの最低フロー
 - 視覚回帰や負荷テストはスコープ外

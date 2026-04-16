@@ -6,8 +6,8 @@ import { generateSessionId } from "../lib/crypto.js";
 
 export const SESSION_COOKIE_NAME = "hanare_sid";
 
-/** TTL for PIN (kiosk) sessions: 5 minutes. */
-export const PIN_SESSION_TTL_MS = 5 * 60 * 1000;
+/** TTL for kiosk punch sessions: 5 minutes. */
+export const KIOSK_SESSION_TTL_MS = 5 * 60 * 1000;
 /** TTL for admin/manager sessions: 2 hours (sliding). */
 export const ADMIN_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 
@@ -79,7 +79,7 @@ export const sessionMiddleware: MiddlewareHandler<{
 export function createSession(c: Context, employeeId: number, role: Role): SessionUser {
   const id = generateSessionId();
   const now = Date.now();
-  const ttl = role === "staff" ? PIN_SESSION_TTL_MS : ADMIN_SESSION_TTL_MS;
+  const ttl = role === "staff" ? KIOSK_SESSION_TTL_MS : ADMIN_SESSION_TTL_MS;
   const expiresAt = now + ttl;
 
   db.insert(schema.sessions)

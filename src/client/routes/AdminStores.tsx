@@ -41,6 +41,15 @@ type ToastState = {
   message: string;
 } | null;
 
+function storeBadgeLabel(store: Store): string {
+  const code = store.code.trim().toLowerCase();
+  if (["jakuan", "zyakuan", "zyakuann", "suzumean"].includes(code)) return "本店";
+  if (code === "hanare") return "はなれ";
+  if (store.display_name.includes("本店")) return "本店";
+  if (store.display_name.includes("はなれ")) return "はなれ";
+  return "店舗";
+}
+
 function emptyForm(): FormState {
   return {
     code: "",
@@ -171,7 +180,7 @@ export function AdminStoresPage() {
                 <WashiCard padding="lg" highlight={idx === 0}>
                   <div className="wa-stores__cardInner">
                     <div className="wa-stores__cardHead">
-                      <span className="wa-stores__code">{s.code}</span>
+                      <span className="wa-stores__code">{storeBadgeLabel(s)}</span>
                       <h2 className="wa-stores__name">{s.display_name || s.name}</h2>
                     </div>
                     <dl className="wa-stores__meta">
@@ -239,7 +248,7 @@ export function AdminStoresPage() {
         {form ? (
           <div className="wa-stores__form">
             <label className="wa-stores__field">
-              <span>店舗コード</span>
+              <span>内部コード</span>
               <input
                 type="text"
                 value={form.code}

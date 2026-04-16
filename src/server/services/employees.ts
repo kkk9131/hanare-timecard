@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNull, like, or } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { writeAuditLog } from "./audit.js";
@@ -126,7 +127,6 @@ export interface CreateEmployeeInput {
   role: Role;
   login_id?: string;
   password?: string;
-  pin: string;
   hourly_wage?: number;
   hire_date: string;
   store_ids: number[];
@@ -151,6 +151,10 @@ function assertStoresExist(storeIds: number[]): void {
       throw new EmployeeServiceError("invalid_store", `店舗 id=${sid} が存在しません`, 422);
     }
   }
+}
+
+function buildLegacyPinHash(): string {
+  return bcrypt.hashSync(`legacy-pin-${randomUUID()}`, BCRYPT_ROUNDS);
 }
 
 export function createEmployee(input: CreateEmployeeInput, actorId: number): EmployeeDTO {
@@ -186,7 +190,6 @@ export function createEmployee(input: CreateEmployeeInput, actorId: number): Emp
   }
 
   const now = Date.now();
-  const pinHash = bcrypt.hashSync(input.pin, BCRYPT_ROUNDS);
   const passwordHash = input.password ? bcrypt.hashSync(input.password, BCRYPT_ROUNDS) : null;
 
   const inserted = db
@@ -197,7 +200,7 @@ export function createEmployee(input: CreateEmployeeInput, actorId: number): Emp
       role: input.role,
       loginId: input.login_id ?? null,
       passwordHash,
-      pinHash,
+      pinHash: buildLegacyPinHash(),
       hourlyWage: input.hourly_wage ?? 0,
       hireDate: input.hire_date,
       retireDate: null,
@@ -227,7 +230,7 @@ export function createEmployee(input: CreateEmployeeInput, actorId: number): Emp
     entityType: "employee",
     entityId: dto.id,
     before: null,
-    after: { ...dto, pin: "***", password: input.password ? "***" : null },
+    after: { ...dto, password: input.password ? "***" : null },
     occurredAt: now,
   });
   return dto;
@@ -359,30 +362,6 @@ export function updateEmployee(
     occurredAt: now,
   });
   return afterDTO;
-}
-
-export function resetPin(id: number, newPin: string, actorId: number): EmployeeDTO | null {
-  const before = db.select().from(schema.employees).where(eq(schema.employees.id, id)).get();
-  if (!before) return null;
-
-  const now = Date.now();
-  const pinHash = bcrypt.hashSync(newPin, BCRYPT_ROUNDS);
-  db.update(schema.employees)
-    .set({ pinHash, pinFailCount: 0, lockUntil: null, updatedAt: now })
-    .where(eq(schema.employees.id, id))
-    .run();
-
-  writeAuditLog({
-    actorId,
-    action: "employee.reset_pin",
-    entityType: "employee",
-    entityId: id,
-    before: { pin_hash: "***" },
-    after: { pin_hash: "***" },
-    occurredAt: now,
-  });
-
-  return getEmployee(id);
 }
 
 export function retireEmployee(

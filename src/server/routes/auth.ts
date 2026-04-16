@@ -1,14 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { adminLoginSchema, pinLoginSchema } from "../../shared/schemas.js";
+import { adminLoginSchema, kioskLoginSchema } from "../../shared/schemas.js";
 import { requireAuth } from "../middleware/auth.js";
 import { createSession, destroySession, type HonoVariables } from "../middleware/session.js";
-import {
-  getEmployeeProfile,
-  listPublicEmployees,
-  verifyAdminLogin,
-  verifyPin,
-} from "../services/auth.js";
+import { getEmployeeProfile, listPublicEmployees, startKioskSession, verifyAdminLogin } from "../services/auth.js";
 
 export const authRoutes = new Hono<{ Variables: HonoVariables }>();
 
@@ -34,12 +29,12 @@ authRoutes.get("/employees", (c) => {
 });
 
 /**
- * POST /api/auth/pin-login
- * Body: { employee_id, pin }
+ * POST /api/auth/kiosk-login
+ * Body: { employee_id }
  */
-authRoutes.post("/pin-login", async (c) => {
+authRoutes.post("/kiosk-login", async (c) => {
   const raw = await c.req.json().catch(() => null);
-  const parsed = pinLoginSchema.safeParse(raw);
+  const parsed = kioskLoginSchema.safeParse(raw);
   if (!parsed.success) {
     return c.json(
       {
@@ -51,29 +46,15 @@ authRoutes.post("/pin-login", async (c) => {
     );
   }
 
-  const result = verifyPin(parsed.data.employee_id, parsed.data.pin);
+  const result = startKioskSession(parsed.data.employee_id);
 
   if (result.kind === "not_found") {
-    return c.json({ error: "invalid_pin", message: "従業員が見つかりません", remaining: 5 }, 401);
-  }
-  if (result.kind === "locked") {
     return c.json(
       {
-        error: "locked",
-        message: "5 回連続で誤入力されたため、5 分間ロックされています",
-        lock_until: result.lock_until,
+        error: "employee_not_found",
+        message: "従業員が見つかりません",
       },
-      423,
-    );
-  }
-  if (result.kind === "invalid_pin") {
-    return c.json(
-      {
-        error: "invalid_pin",
-        message: "PIN が違います",
-        remaining: result.remaining,
-      },
-      401,
+      404,
     );
   }
 

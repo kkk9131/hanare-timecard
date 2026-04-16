@@ -51,7 +51,6 @@ interface EmployeeSeed {
   role: "staff" | "manager" | "admin";
   loginId: string | null;
   password: string | null;
-  pin: string;
   hourlyWage: number;
   hireDate: string;
   note: string | null;
@@ -60,7 +59,7 @@ interface EmployeeSeed {
 
 const STORES: StoreSeed[] = [
   {
-    code: "jakuan",
+    code: "suzumean",
     name: "雀庵",
     displayName: "雀庵 本店",
     openingTime: "17:00",
@@ -84,12 +83,11 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "admin",
     loginId: "oyakata",
     password: "hanare2026",
-    pin: "9999",
     hourlyWage: 0,
     hireDate: "2020-01-01",
     note: "オーナー",
     stores: [
-      { code: "jakuan", isPrimary: true },
+      { code: "suzumean", isPrimary: true },
       { code: "hanare", isPrimary: false },
     ],
   },
@@ -97,13 +95,12 @@ const EMPLOYEES: EmployeeSeed[] = [
     name: "本店 店長",
     kana: "ほんてん てんちょう",
     role: "manager",
-    loginId: "jakuan_mgr",
-    password: "jakuan2026",
-    pin: "1111",
+    loginId: "suzumean_mgr",
+    password: "suzumean2026",
     hourlyWage: 1500,
     hireDate: "2021-04-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "はなれ 店長",
@@ -111,7 +108,6 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "manager",
     loginId: "hanare_mgr",
     password: "hanare2026",
-    pin: "2222",
     hourlyWage: 1500,
     hireDate: "2022-03-01",
     note: null,
@@ -123,11 +119,10 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "1001",
     hourlyWage: 1200,
     hireDate: "2023-06-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "佐藤 花子",
@@ -135,11 +130,10 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "1002",
     hourlyWage: 1200,
     hireDate: "2023-07-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "鈴木 次郎",
@@ -147,11 +141,10 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "1003",
     hourlyWage: 1200,
     hireDate: "2023-08-01",
     note: null,
-    stores: [{ code: "jakuan", isPrimary: true }],
+    stores: [{ code: "suzumean", isPrimary: true }],
   },
   {
     name: "田中 美咲",
@@ -159,7 +152,6 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "2001",
     hourlyWage: 1250,
     hireDate: "2023-09-01",
     note: null,
@@ -171,7 +163,6 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "2002",
     hourlyWage: 1250,
     hireDate: "2023-10-01",
     note: null,
@@ -183,7 +174,6 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "2003",
     hourlyWage: 1250,
     hireDate: "2023-11-01",
     note: null,
@@ -195,12 +185,11 @@ const EMPLOYEES: EmployeeSeed[] = [
     role: "staff",
     loginId: null,
     password: null,
-    pin: "3001",
     hourlyWage: 1300,
     hireDate: "2024-01-15",
     note: "両店舗兼務",
     stores: [
-      { code: "jakuan", isPrimary: true },
+      { code: "suzumean", isPrimary: true },
       { code: "hanare", isPrimary: false },
     ],
   },
@@ -254,7 +243,7 @@ function insertEmployees(db: Sqlite, stores: InsertedStore[]): InsertedEmployee[
   const ts = now();
   for (const e of EMPLOYEES) {
     const passwordHash = e.password ? hash(e.password) : null;
-    const pinHash = hash(e.pin);
+    const pinHash = hash(`legacy-pin:${e.name}:${e.role}`);
     const info = empStmt.run(
       e.name,
       e.kana,

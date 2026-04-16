@@ -371,7 +371,7 @@ export function AdminDashboardPage() {
             <li>
               <Link to="/admin/employees" className="wa-dash__shortlink">
                 <span className="wa-dash__shortlabel">従業員マスタ</span>
-                <span className="wa-dash__shortmeta">入社・退社・PIN 設定</span>
+                <span className="wa-dash__shortmeta">入社・退社・権限設定</span>
               </Link>
             </li>
             <li>

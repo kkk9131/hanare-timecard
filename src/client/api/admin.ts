@@ -358,7 +358,6 @@ export type CreateEmployeeBody = {
   role: "staff" | "manager" | "admin";
   login_id?: string;
   password?: string;
-  pin: string;
   hourly_wage?: number;
   hire_date: string;
   store_ids: number[];
@@ -372,7 +371,7 @@ export function createEmployee(body: CreateEmployeeBody, signal?: AbortSignal) {
     .then((r) => r.employee);
 }
 
-export type UpdateEmployeeBody = Partial<Omit<CreateEmployeeBody, "pin">> & {
+export type UpdateEmployeeBody = Partial<CreateEmployeeBody> & {
   retire_date?: string | null;
   login_id?: string | null;
 };
@@ -380,12 +379,6 @@ export type UpdateEmployeeBody = Partial<Omit<CreateEmployeeBody, "pin">> & {
 export function updateEmployee(id: number, body: UpdateEmployeeBody, signal?: AbortSignal) {
   return apiClient
     .patch(`/api/employees/${id}`, employeeMutationResponseSchema, body, signal)
-    .then((r) => r.employee);
-}
-
-export function resetEmployeePin(id: number, body: { pin: string }, signal?: AbortSignal) {
-  return apiClient
-    .post(`/api/employees/${id}/pin`, employeeMutationResponseSchema, body, signal)
     .then((r) => r.employee);
 }
 

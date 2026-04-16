@@ -61,83 +61,22 @@ export function fetchPublicEmployees(
   return apiClient.get(path, listEmployeesResponseSchema, signal).then((r) => r.employees);
 }
 
-// ---------- /api/auth/pin-login ----------
+// ---------- /api/auth/kiosk-login ----------
 
-const pinLoginOkSchema = z.object({
+const kioskLoginResponseSchema = z.object({
   employee: employeeProfileSchema,
   session_expires_at: z.number(),
 });
 
-export type PinLoginOk = z.infer<typeof pinLoginOkSchema>;
+export type KioskLoginOk = z.infer<typeof kioskLoginResponseSchema>;
 
-export type PinLoginError =
-  | { kind: "invalid_pin"; remaining: number; message: string }
-  | { kind: "locked"; lock_until: number; message: string }
-  | { kind: "unknown"; message: string };
-
-export type PinLoginResult = { kind: "ok"; data: PinLoginOk } | PinLoginError;
-
-/**
- * Calls /api/auth/pin-login. Always resolves (never throws on 401/423)
- * so the caller can render kind-tonalty messages.
- */
-export async function pinLogin(employeeId: number, pin: string): Promise<PinLoginResult> {
-  const res = await fetch("/api/auth/pin-login", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ employee_id: employeeId, pin }),
-  });
-
-  const text = await res.text();
-  const json: unknown = text.length > 0 ? JSON.parse(text) : undefined;
-
-  if (res.ok) {
-    const parsed = pinLoginOkSchema.safeParse(json);
-    if (!parsed.success) {
-      return { kind: "unknown", message: "ログイン応答が不正です" };
-    }
-    return { kind: "ok", data: parsed.data };
-  }
-
-  if (res.status === 401) {
-    const shape = z
-      .object({
-        error: z.string(),
-        message: z.string().optional(),
-        remaining: z.number().optional(),
-      })
-      .safeParse(json);
-    if (shape.success) {
-      return {
-        kind: "invalid_pin",
-        remaining: shape.data.remaining ?? 0,
-        message: shape.data.message ?? "申し訳ございません、もう一度 PIN をご確認ください",
-      };
-    }
-  }
-
-  if (res.status === 423) {
-    const shape = z
-      .object({
-        error: z.string(),
-        message: z.string().optional(),
-        lock_until: z.number(),
-      })
-      .safeParse(json);
-    if (shape.success) {
-      return {
-        kind: "locked",
-        lock_until: shape.data.lock_until,
-        message: shape.data.message ?? "5 回続けて誤入力されたため、5 分後に再度お試しください",
-      };
-    }
-  }
-
-  return {
-    kind: "unknown",
-    message: "通信に問題が起きました。もう一度お試しください",
-  };
+export async function kioskLogin(employeeId: number, signal?: AbortSignal): Promise<KioskLoginOk> {
+  return apiClient.post(
+    "/api/auth/kiosk-login",
+    kioskLoginResponseSchema,
+    { employee_id: employeeId },
+    signal,
+  );
 }
 
 export async function logout(): Promise<void> {

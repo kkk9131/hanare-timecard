@@ -57,7 +57,7 @@ describe("buildPeriodSummary", () => {
     db.insert(schema.stores)
       .values({
         id: 1,
-        code: "jakuan",
+        code: "suzumean",
         name: "雀庵",
         displayName: "雀庵",
         openingTime: "10:00",
@@ -150,7 +150,7 @@ describe("buildPeriodSummary", () => {
       .values([
         {
           id: 1,
-          code: "jakuan",
+          code: "suzumean",
           name: "雀庵",
           displayName: "雀庵",
           openingTime: "10:00",

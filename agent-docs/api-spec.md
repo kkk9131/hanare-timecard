@@ -21,7 +21,7 @@ REST over JSON。すべて `/api` プレフィックス。Cookie セッション
 | Method | Path                  | Role | 説明                                               |
 | ------ | --------------------- | ---- | -------------------------------------------------- |
 | GET    | /api/auth/employees   | 公開 | 打刻トップ用従業員一覧 (id, name, kana, store_ids) |
-| POST   | /api/auth/pin-login   | 公開 | `{employee_id, pin}` → セッション                  |
+| POST   | /api/auth/kiosk-login | 公開 | `{employee_id}` → 共用端末用セッション             |
 | POST   | /api/auth/admin-login | 公開 | `{login_id, password}`                             |
 | POST   | /api/auth/logout      | 認証 | セッション破棄                                     |
 | GET    | /api/auth/me          | 認証 | 現在ユーザー情報                                   |
@@ -29,11 +29,9 @@ REST over JSON。すべて `/api` プレフィックス。Cookie セッション
 リクエスト例:
 
 ```json
-POST /api/auth/pin-login
-{ "employee_id": 12, "pin": "1234" }
+POST /api/auth/kiosk-login
+{ "employee_id": 12 }
 → 200 { "employee": {...}, "session_expires_at": 1712345678000 }
-→ 401 { "error": "invalid_pin", "remaining": 3 }
-→ 423 { "error": "locked", "lock_until": 1712349278000 }
 ```
 
 ### Stores
@@ -49,9 +47,8 @@ POST /api/auth/pin-login
 | Method | Path                      | Role     | 説明                                  |
 | ------ | ------------------------- | -------- | ------------------------------------- |
 | GET    | /api/employees            | manager+ | クエリ: `?store_id=&include_retired=` |
-| POST   | /api/employees            | admin    | 新規追加 (PIN は別エンドポイント)     |
+| POST   | /api/employees            | admin    | 新規追加                              |
 | PATCH  | /api/employees/:id        | admin    | 更新                                  |
-| POST   | /api/employees/:id/pin    | admin    | PIN リセット                          |
 | POST   | /api/employees/:id/retire | admin    | 退職処理                              |
 
 ### Time Punches

@@ -16,11 +16,11 @@ type KioskState = {
   storeFilter: StoreFilter;
   setStoreFilter: (filter: StoreFilter) => void;
 
-  /** K02 で選択中の従業員 (PIN 入力対象) */
+  /** 打刻開始前に選択された従業員 */
   selectedEmployee: PublicEmployee | null;
   selectEmployee: (e: PublicEmployee | null) => void;
 
-  /** K03 のセッション。pin-login 成功後にセットされる */
+  /** K03 のセッション。kiosk-login 成功後にセットされる */
   session: EmployeeProfile | null;
   /** ログイン時に push される打刻操作対象店舗 */
   activeStoreId: number | null;

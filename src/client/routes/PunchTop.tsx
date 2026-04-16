@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchPublicEmployees, type PublicEmployee } from "../api/auth";
+import { fetchPublicEmployees, kioskLogin, type PublicEmployee } from "../api/auth";
 import type { ApiError } from "../api/client";
 import { BigClock } from "../components/ui/BigClock";
 import { EmployeeTile } from "../components/ui/EmployeeTile";
@@ -18,14 +18,18 @@ import { useKioskStore } from "../state/kioskStore";
  *
  * 受け入れ条件:
  * - 従業員一覧を kana 順に表示
- * - 名前タップで K02 へ進む
+ * - 名前タップでそのまま打刻ボードへ進む
  * - 店舗フィルタで「全店」「雀庵 本店」「雀庵はなれ」を切替可能
  */
 export function PunchTop() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const storeFilter = useKioskStore((s) => s.storeFilter);
   const setStoreFilter = useKioskStore((s) => s.setStoreFilter);
   const selectEmployee = useKioskStore((s) => s.selectEmployee);
+  const setSession = useKioskStore((s) => s.setSession);
+  const [submittingEmployeeId, setSubmittingEmployeeId] = useState<number | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const employeesQuery = useQuery<PublicEmployee[], ApiError>({
     queryKey: ["public-employees"],
@@ -49,9 +53,23 @@ export function PunchTop() {
     return all.filter((e) => e.store_ids.includes(storeFilter));
   }, [employeesQuery.data, storeFilter]);
 
-  const onSelect = (emp: PublicEmployee) => {
+  const onSelect = async (emp: PublicEmployee) => {
     selectEmployee(emp);
-    navigate("/punch/pin");
+    setLoginError(null);
+    setSubmittingEmployeeId(emp.id);
+
+    try {
+      const result = await kioskLogin(emp.id);
+      setSession(result.employee, result.employee.store_ids[0] ?? null);
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      navigate("/punch/board");
+    } catch {
+      setLoginError(
+        "申し訳ございません、打刻の準備ができませんでした。しばらくしてからもう一度お試しください。",
+      );
+    } finally {
+      setSubmittingEmployeeId(null);
+    }
   };
 
   return (
@@ -108,6 +126,19 @@ export function PunchTop() {
 
         {/* 従業員タイル */}
         <WashiCard eyebrow="STEP 01" title="お名前を選んでください" padding="lg">
+          {loginError ? (
+            <p
+              role="alert"
+              style={{
+                color: "var(--danger-ink)",
+                fontFamily: "var(--font-gothic)",
+                lineHeight: 1.7,
+                margin: "0 0 var(--space-4)",
+              }}
+            >
+              {loginError}
+            </p>
+          ) : null}
           {employeesQuery.isLoading ? (
             <p
               style={{
@@ -150,12 +181,25 @@ export function PunchTop() {
                   name={e.name}
                   kana={e.kana}
                   state="idle"
+                  disabled={submittingEmployeeId != null}
                   onClick={() => onSelect(e)}
                 />
               ))}
             </div>
           )}
         </WashiCard>
+
+        {submittingEmployeeId != null ? (
+          <p
+            style={{
+              color: "var(--washi-300)",
+              fontFamily: "var(--font-gothic)",
+              margin: 0,
+            }}
+          >
+            打刻画面へ進んでいます…
+          </p>
+        ) : null}
       </Stack>
     </ShojiTransition>
   );

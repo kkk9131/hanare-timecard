@@ -324,7 +324,7 @@
   color: var(--text-meta);
 }
 
-/* ---------- pin / retire modals ---------- */
+/* ---------- retire modal ---------- */
 .wa-emp__modalLead {
   margin: 0 0 var(--space-3);
   font-family: var(--font-gothic);

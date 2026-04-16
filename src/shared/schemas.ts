@@ -24,9 +24,6 @@ export const timeStringSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/u, "time must be HH:MM");
 
-/** 4–6 digit PIN */
-export const pinSchema = z.string().regex(/^[0-9]{4,6}$/u, "pin must be 4-6 digits");
-
 /** unix ms */
 export const unixMsSchema = z.number().int().nonnegative();
 
@@ -34,9 +31,8 @@ export const idSchema = z.number().int().positive();
 
 // ---------- Auth ----------
 
-export const pinLoginSchema = z.object({
+export const kioskLoginSchema = z.object({
   employee_id: idSchema,
-  pin: pinSchema,
 });
 
 export const adminLoginSchema = z.object({
@@ -68,7 +64,6 @@ export const createEmployeeSchema = z
     role: roleSchema,
     login_id: z.string().min(1).max(64).optional(),
     password: z.string().min(8).max(256).optional(),
-    pin: pinSchema,
     hourly_wage: z.number().int().nonnegative().default(0),
     hire_date: dateStringSchema,
     store_ids: z.array(idSchema).min(1),
@@ -95,10 +90,6 @@ export const updateEmployeeSchema = z.object({
   store_ids: z.array(idSchema).min(1).optional(),
   primary_store_id: idSchema.optional(),
   note: z.string().max(1024).nullable().optional(),
-});
-
-export const resetPinSchema = z.object({
-  pin: pinSchema,
 });
 
 export const retireEmployeeSchema = z.object({

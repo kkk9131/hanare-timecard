@@ -2,7 +2,7 @@
  * 店舗 ID → 表示名のヒューリスティックなマップ。
  *
  * 打刻トップ (K01) は未認証コンテキストで開かれるため、
- * `/api/stores` を直接叩けない。サーバ seed の挿入順 (jakuan→hanare)
+ * `/api/stores` を直接叩けない。サーバ seed の挿入順 (suzumean→hanare)
  * を踏まえて静的マップで補う。未知 ID は「店舗 N」と表示する。
  */
 const FALLBACK_NAMES: Record<number, string> = {

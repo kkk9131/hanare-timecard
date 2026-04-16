@@ -1,10 +1,8 @@
-import { useState } from "react";
 import {
   AndonHover,
   AppShell,
   BigClock,
   EmployeeTile,
-  PinPad,
   ShojiTransition,
   StatePill,
   SumiButton,
@@ -17,8 +15,6 @@ import {
  * import.meta.env.DEV ガード下でのみ登録される。
  */
 export function DevComponentsPage() {
-  const [pin, setPin] = useState("");
-
   return (
     <AppShell storeName="dev preview" verticalLogo>
       <div
@@ -61,17 +57,13 @@ export function DevComponentsPage() {
           </div>
         </WashiCard>
 
-        <WashiCard title="PinPad" eyebrow="05">
-          <PinPad value={pin} onChange={setPin} onSubmit={() => setPin("")} />
-        </WashiCard>
-
-        <WashiCard title="ShojiTransition" eyebrow="06">
+        <WashiCard title="ShojiTransition" eyebrow="05">
           <ShojiTransition transitionKey="demo">
             <p>障子が開くような切替アニメーション。</p>
           </ShojiTransition>
         </WashiCard>
 
-        <WashiCard title="AndonHover" eyebrow="07">
+        <WashiCard title="AndonHover" eyebrow="06">
           <div style={{ display: "flex", gap: 16 }}>
             <AndonHover tone="kincha">
               <div style={{ padding: 16 }}>kincha 行灯</div>
@@ -82,7 +74,7 @@ export function DevComponentsPage() {
           </div>
         </WashiCard>
 
-        <WashiCard title="StatePill" eyebrow="08">
+        <WashiCard title="StatePill" eyebrow="07">
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <StatePill label="未出勤" tone="neutral" />
             <StatePill label="勤務中" tone="success" />
@@ -92,7 +84,7 @@ export function DevComponentsPage() {
           </div>
         </WashiCard>
 
-        <WashiCard title="AppShell" eyebrow="09">
+        <WashiCard title="AppShell" eyebrow="08">
           <p>このページ全体が AppShell でラップされています。</p>
         </WashiCard>
       </div>
