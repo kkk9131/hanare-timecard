@@ -1,17 +1,25 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchPublicEmployees, kioskLogin, type PublicEmployee } from "../api/auth";
+import {
+  fetchPublicEmployees,
+  kioskLogin,
+  type PublicEmployee,
+  unlockAdminGate,
+} from "../api/auth";
 import type { ApiError } from "../api/client";
+import { StoreSwitcher, type StoreFilter as StoreSwitcherValue } from "../components/StoreSwitcher";
 import { BigClock } from "../components/ui/BigClock";
 import { EmployeeTile } from "../components/ui/EmployeeTile";
 import { Heading } from "../components/ui/Heading";
+import { Modal } from "../components/ui/Modal";
 import { ShojiTransition } from "../components/ui/ShojiTransition";
 import { Inline, Stack } from "../components/ui/Stack";
 import { SumiButton } from "../components/ui/SumiButton";
 import { WashiCard } from "../components/ui/WashiCard";
-import { storeShortLabel } from "../lib/storeLabels";
+import { KNOWN_STORE_IDS, storeShortLabel } from "../lib/storeLabels";
 import { useKioskStore } from "../state/kioskStore";
+import "./PunchTop.css";
 
 /**
  * K01 打刻トップ。店舗フィルタタブ + 大時計 + 従業員タイル一覧。
@@ -19,7 +27,7 @@ import { useKioskStore } from "../state/kioskStore";
  * 受け入れ条件:
  * - 従業員一覧を kana 順に表示
  * - 名前タップでそのまま打刻ボードへ進む
- * - 店舗フィルタで「全店」「雀庵 本店」「雀庵はなれ」を切替可能
+ * - 店舗フィルタで「本店」「離れ」を切替可能
  */
 export function PunchTop() {
   const navigate = useNavigate();
@@ -30,6 +38,9 @@ export function PunchTop() {
   const setSession = useKioskStore((s) => s.setSession);
   const [submittingEmployeeId, setSubmittingEmployeeId] = useState<number | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [adminGateOpen, setAdminGateOpen] = useState(false);
+  const [adminPin, setAdminPin] = useState("");
+  const [adminPinSubmitted, setAdminPinSubmitted] = useState(false);
 
   const employeesQuery = useQuery<PublicEmployee[], ApiError>({
     queryKey: ["public-employees"],
@@ -37,21 +48,47 @@ export function PunchTop() {
     staleTime: 30_000,
   });
 
-  // 店舗 ID 一覧 (フィルタタブ用)
-  const storeIds = useMemo(() => {
-    const set = new Set<number>();
-    for (const e of employeesQuery.data ?? []) {
-      for (const id of e.store_ids) set.add(id);
-    }
-    return Array.from(set).sort((a, b) => a - b);
-  }, [employeesQuery.data]);
+  const storeIds = KNOWN_STORE_IDS;
 
   // 表示対象 (store filter 適用)
   const visible = useMemo(() => {
     const all = employeesQuery.data ?? [];
-    if (storeFilter === "all") return all;
+    if (storeFilter === "all") {
+      const firstStoreId = storeIds[0];
+      return firstStoreId != null ? all.filter((e) => e.store_ids.includes(firstStoreId)) : all;
+    }
     return all.filter((e) => e.store_ids.includes(storeFilter));
   }, [employeesQuery.data, storeFilter]);
+
+  useEffect(() => {
+    if (storeFilter !== "all") return;
+    const firstStoreId = storeIds[0];
+    if (firstStoreId != null) {
+      setStoreFilter(firstStoreId);
+    }
+  }, [setStoreFilter, storeFilter]);
+
+  const storeOptions = useMemo(
+    () =>
+      storeIds.map((id) => ({
+        id,
+        code: String(id),
+        name: storeShortLabel(id),
+        display_name: storeShortLabel(id),
+      })),
+    [],
+  );
+
+  const adminGateMutation = useMutation({
+    mutationFn: (pin: string) => unlockAdminGate({ pin }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["auth", "admin-gate-status"] });
+      setAdminGateOpen(false);
+      setAdminPin("");
+      setAdminPinSubmitted(false);
+      navigate("/admin/login");
+    },
+  });
 
   const onSelect = async (emp: PublicEmployee) => {
     selectEmployee(emp);
@@ -72,13 +109,45 @@ export function PunchTop() {
     }
   };
 
+  const closeAdminGate = () => {
+    setAdminGateOpen(false);
+    setAdminPin("");
+    setAdminPinSubmitted(false);
+    adminGateMutation.reset();
+  };
+
+  const submitAdminGate = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAdminPinSubmitted(true);
+    if (!/^\d{4,6}$/.test(adminPin)) return;
+    adminGateMutation.mutate(adminPin);
+  };
+
+  const adminPinEmpty = adminPinSubmitted && adminPin.length === 0;
+  const adminPinInvalid = adminPinSubmitted && adminPin.length > 0 && !/^\d{4,6}$/.test(adminPin);
+
   return (
     <ShojiTransition transitionKey="K01">
       <Stack gap={7} style={{ paddingTop: "var(--space-3)" }}>
+        <div className="wa-kiosk-top__controls">
+          <div className="wa-kiosk-top__store-switch">
+            <span className="wa-kiosk-top__control-label">店舗切り替え</span>
+            <StoreSwitcher
+              stores={storeOptions}
+              value={storeFilter as StoreSwitcherValue}
+              onChange={(next) => setStoreFilter(next)}
+              includeAll={false}
+            />
+          </div>
+          <SumiButton variant="secondary" size="md" onClick={() => setAdminGateOpen(true)}>
+            管理者画面へ
+          </SumiButton>
+        </div>
+
         {/* 上段: 見出し + 大時計 */}
         <Inline justify="space-between" align="flex-start">
           <Stack gap={3}>
-            <Heading level={1} eyebrow="JAKUAN ／ TIMECARD">
+            <Heading level={1} eyebrow="SUZUMEAN ／ TIMECARD">
               ようこそ、雀庵へ
             </Heading>
             <p
@@ -93,36 +162,12 @@ export function PunchTop() {
             >
               はじめに、お名前をお選びください。
             </p>
+            <p className="wa-kiosk-top__current-store">
+              現在の表示: {storeFilter === "all" ? "本店" : storeShortLabel(storeFilter)}
+            </p>
           </Stack>
           <BigClock size="lg" seconds showDate />
         </Inline>
-
-        {/* 店舗フィルタ */}
-        {storeIds.length > 1 ? (
-          <Inline gap={2} aria-label="店舗フィルタ" role="tablist">
-            <SumiButton
-              variant={storeFilter === "all" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setStoreFilter("all")}
-              aria-pressed={storeFilter === "all"}
-              role="tab"
-            >
-              全て
-            </SumiButton>
-            {storeIds.map((id) => (
-              <SumiButton
-                key={id}
-                variant={storeFilter === id ? "primary" : "ghost"}
-                size="sm"
-                onClick={() => setStoreFilter(id)}
-                aria-pressed={storeFilter === id}
-                role="tab"
-              >
-                {storeShortLabel(id)}
-              </SumiButton>
-            ))}
-          </Inline>
-        ) : null}
 
         {/* 従業員タイル */}
         <WashiCard eyebrow="STEP 01" title="お名前を選んでください" padding="lg">
@@ -200,6 +245,81 @@ export function PunchTop() {
             打刻画面へ進んでいます…
           </p>
         ) : null}
+
+        <Modal
+          open={adminGateOpen}
+          onClose={closeAdminGate}
+          eyebrow="PIN"
+          title="管理者画面へ進む"
+          maxWidth="520px"
+          footer={
+            <>
+              <SumiButton
+                variant="ghost"
+                onClick={closeAdminGate}
+                disabled={adminGateMutation.isPending}
+              >
+                戻る
+              </SumiButton>
+              <SumiButton
+                variant="primary"
+                form="admin-gate-form"
+                type="submit"
+                disabled={adminGateMutation.isPending}
+              >
+                {adminGateMutation.isPending ? "確認しています…" : "管理者ログインへ"}
+              </SumiButton>
+            </>
+          }
+        >
+          <form
+            id="admin-gate-form"
+            className="wa-kiosk-top__admin-form"
+            onSubmit={submitAdminGate}
+          >
+            <Stack gap={4}>
+              <p className="wa-kiosk-top__admin-copy">
+                共用端末から管理者画面へ進む前に、管理者用 PIN をご入力ください。
+              </p>
+
+              <label className="wa-kiosk-top__field">
+                <span className="wa-kiosk-top__field-label">管理者 PIN</span>
+                <input
+                  className={`wa-kiosk-top__pin-input ${
+                    adminPinEmpty || adminPinInvalid ? "is-invalid" : ""
+                  }`}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  maxLength={6}
+                  data-autofocus="true"
+                  placeholder="4〜6桁の数字"
+                  value={adminPin}
+                  onChange={(event) =>
+                    setAdminPin(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  aria-invalid={adminPinEmpty || adminPinInvalid}
+                  disabled={adminGateMutation.isPending}
+                />
+                {adminPinEmpty ? (
+                  <span className="wa-kiosk-top__field-error">PIN をご入力ください。</span>
+                ) : null}
+                {adminPinInvalid ? (
+                  <span className="wa-kiosk-top__field-error">
+                    PIN は 4〜6 桁の数字でご入力ください。
+                  </span>
+                ) : null}
+              </label>
+
+              {adminGateMutation.isError ? (
+                <div className="wa-kiosk-top__admin-error" role="alert">
+                  PIN が違います。もう一度ご確認ください。
+                </div>
+              ) : null}
+            </Stack>
+          </form>
+        </Modal>
       </Stack>
     </ShojiTransition>
   );

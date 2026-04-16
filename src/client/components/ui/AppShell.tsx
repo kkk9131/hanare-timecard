@@ -7,7 +7,7 @@ type AppShellProps = {
   sidebar?: ReactNode;
   /** ヘッダー右側スロット */
   headerRight?: ReactNode;
-  /** 店舗サブタイトル: "本店" / "はなれ" */
+  /** 店舗サブタイトル: "本店" / "離れ" */
   storeName?: string;
   /** 縦組ロゴで表示するか */
   verticalLogo?: boolean;

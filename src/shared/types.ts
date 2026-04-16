@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type {
+  adminGateSchema,
   adminLoginSchema,
   approveCorrectionSchema,
   correctionStatusSchema,
@@ -10,6 +11,7 @@ import type {
   createShiftSchema,
   createStoreSchema,
   exportQuerySchema,
+  kioskLoginSchema,
   listAuditQuerySchema,
   listCorrectionsQuerySchema,
   listEmployeesQuerySchema,
@@ -17,7 +19,6 @@ import type {
   listShiftRequestsQuerySchema,
   listShiftsQuerySchema,
   myPunchesQuerySchema,
-  kioskLoginSchema,
   publishShiftSchema,
   punchSourceSchema,
   punchTypeSchema,
@@ -174,6 +175,7 @@ export interface MonthlySummary {
 
 export type KioskLoginInput = z.infer<typeof kioskLoginSchema>;
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+export type AdminGateInput = z.infer<typeof adminGateSchema>;
 
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
 export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;

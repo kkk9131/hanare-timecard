@@ -33,18 +33,23 @@ export function Modal({
   footer,
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     }
     window.addEventListener("keydown", onKey);
-    // 初期フォーカス: パネル内最初の focusable
+    // 初期フォーカス: 明示指定要素を優先し、open 時に一度だけ当てる
     const t = window.setTimeout(() => {
-      const el = panelRef.current?.querySelector<HTMLElement>(
-        "input, textarea, select, button, [tabindex]",
-      );
+      const el =
+        panelRef.current?.querySelector<HTMLElement>("[data-autofocus='true']") ??
+        panelRef.current?.querySelector<HTMLElement>("input, textarea, select, button, [tabindex]");
       el?.focus();
     }, 30);
     // body スクロール抑制
@@ -55,7 +60,7 @@ export function Modal({
       window.clearTimeout(t);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

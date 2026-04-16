@@ -34,3 +34,10 @@ export function unsign(signed: string): string | null {
   if (!timingSafeEqual(a, b)) return null;
   return value;
 }
+
+export function safeEqualText(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}

@@ -160,8 +160,8 @@ describe("buildPeriodSummary", () => {
         {
           id: 2,
           code: "hanare",
-          name: "雀庵はなれ",
-          displayName: "雀庵はなれ",
+          name: "雀庵 離れ",
+          displayName: "雀庵 離れ",
           openingTime: "10:00",
           closingTime: "22:00",
           createdAt: now,
