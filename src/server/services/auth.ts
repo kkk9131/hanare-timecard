@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
-import { safeEqualText } from "../lib/crypto.js";
 
 /** Number of failed authentication attempts before locking the account. */
 export const MAX_AUTH_FAIL_COUNT = 5;
@@ -65,8 +64,6 @@ export interface AdminLoginLocked {
 
 export type AdminLoginResult = AdminLoginSuccess | AdminLoginInvalid | AdminLoginLocked;
 
-const DEFAULT_ADMIN_GATE_PIN = "9999";
-
 /**
  * Validate an admin/manager login_id + password combination.
  * Reuses the employees table fail-count + lockout columns.
@@ -127,15 +124,6 @@ export function verifyAdminLogin(
       store_ids: storeRows.map((r) => r.storeId),
     },
   };
-}
-
-/**
- * Shared entrance PIN for opening the admin login screen from the kiosk top page.
- * This is separate from each manager/admin account password.
- */
-export function verifyAdminGatePin(pin: string): boolean {
-  const expected = process.env.HANARE_ADMIN_GATE_PIN ?? DEFAULT_ADMIN_GATE_PIN;
-  return safeEqualText(pin, expected);
 }
 
 export interface PublicEmployee {

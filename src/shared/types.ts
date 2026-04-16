@@ -1,6 +1,5 @@
 import type { z } from "zod";
 import type {
-  adminGateSchema,
   adminLoginSchema,
   approveCorrectionSchema,
   correctionStatusSchema,
@@ -175,7 +174,6 @@ export interface MonthlySummary {
 
 export type KioskLoginInput = z.infer<typeof kioskLoginSchema>;
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
-export type AdminGateInput = z.infer<typeof adminGateSchema>;
 
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
 export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;

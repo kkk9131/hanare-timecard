@@ -1,19 +1,12 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { adminGateSchema, adminLoginSchema, kioskLoginSchema } from "../../shared/schemas.js";
+import { adminLoginSchema, kioskLoginSchema } from "../../shared/schemas.js";
 import { requireAuth } from "../middleware/auth.js";
-import {
-  createSession,
-  destroySession,
-  grantAdminGate,
-  type HonoVariables,
-  readAdminGate,
-} from "../middleware/session.js";
+import { createSession, destroySession, type HonoVariables } from "../middleware/session.js";
 import {
   getEmployeeProfile,
   listPublicEmployees,
   startKioskSession,
-  verifyAdminGatePin,
   verifyAdminLogin,
 } from "../services/auth.js";
 
@@ -121,63 +114,6 @@ authRoutes.post("/admin-login", async (c) => {
   return c.json({
     employee: result.employee,
     session_expires_at: session.expiresAt,
-  });
-});
-
-/**
- * GET /api/auth/admin-gate-status
- * Short-lived cookie status used to allow entry to the admin login screen.
- */
-authRoutes.get("/admin-gate-status", (c) => {
-  const gateExpiresAt = readAdminGate(c);
-  const user = c.get("user");
-  const sessionAllowsAdminLogin = user?.role === "manager" || user?.role === "admin";
-
-  if (sessionAllowsAdminLogin) {
-    return c.json({
-      allowed: true,
-      expires_at: user.expiresAt,
-    });
-  }
-
-  return c.json({
-    allowed: gateExpiresAt != null,
-    expires_at: gateExpiresAt,
-  });
-});
-
-/**
- * POST /api/auth/admin-gate
- * Body: { pin }
- */
-authRoutes.post("/admin-gate", async (c) => {
-  const raw = await c.req.json().catch(() => null);
-  const parsed = adminGateSchema.safeParse(raw);
-  if (!parsed.success) {
-    return c.json(
-      {
-        error: "bad_request",
-        message: "PIN は 4〜6 桁の数字でご入力ください",
-        details: parsed.error.flatten(),
-      },
-      400,
-    );
-  }
-
-  if (!verifyAdminGatePin(parsed.data.pin)) {
-    return c.json(
-      {
-        error: "invalid_pin",
-        message: "PIN が違います。もう一度ご確認ください。",
-      },
-      401,
-    );
-  }
-
-  const expiresAt = grantAdminGate(c);
-  return c.json({
-    ok: true,
-    expires_at: expiresAt,
   });
 });
 

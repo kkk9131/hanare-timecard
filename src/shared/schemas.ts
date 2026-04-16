@@ -40,10 +40,6 @@ export const adminLoginSchema = z.object({
   password: z.string().min(1).max(256),
 });
 
-export const adminGateSchema = z.object({
-  pin: z.string().regex(/^\d{4,6}$/u, "pin must be 4-6 digits"),
-});
-
 // ---------- Stores ----------
 
 const weekdayIntSchema = z.number().int().min(0).max(6);

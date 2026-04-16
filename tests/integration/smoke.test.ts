@@ -92,20 +92,16 @@ async function req(path: string, init: ReqInit = {}): Promise<Response> {
   return app.fetch(new Request(`http://localhost${path}`, { ...init, headers }));
 }
 
-function extractCookie(res: Response, name: string): string {
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) throw new Error("no Set-Cookie on response");
-  const match = setCookie.match(new RegExp(`${name}=[^;]+`));
-  if (!match) throw new Error(`${name} not in Set-Cookie: ${setCookie}`);
-  return match[0];
-}
-
 /**
  * Extract the hanare_sid cookie value from a Set-Cookie header.
  * Returns the full "hanare_sid=..." fragment ready to be passed as a Cookie header.
  */
 function extractSid(res: Response): string {
-  return extractCookie(res, "hanare_sid");
+  const setCookie = res.headers.get("set-cookie");
+  if (!setCookie) throw new Error("no Set-Cookie on response");
+  const match = setCookie.match(/hanare_sid=[^;]+/);
+  if (!match) throw new Error(`hanare_sid not in Set-Cookie: ${setCookie}`);
+  return match[0];
 }
 
 beforeAll(() => {
@@ -131,26 +127,6 @@ describe("task-6003 smoke: primary end-to-end flow", () => {
     const healthJson = (await health.json()) as { status: string; ok: boolean };
     expect(healthJson.status).toBe("ok");
     expect(healthJson.ok).toBe(true);
-
-    // 1.5 admin gate PIN unlock
-    const gateBefore = await req("/api/auth/admin-gate-status");
-    expect(gateBefore.status).toBe(200);
-    const gateBeforeBody = (await gateBefore.json()) as { allowed: boolean };
-    expect(gateBeforeBody.allowed).toBe(false);
-
-    const adminGate = await req("/api/auth/admin-gate", {
-      method: "POST",
-      body: JSON.stringify({ pin: "9999" }),
-    });
-    expect(adminGate.status).toBe(200);
-    const gateCookie = extractCookie(adminGate, "hanare_admin_gate");
-
-    const gateAfter = await req("/api/auth/admin-gate-status", {
-      cookie: gateCookie,
-    });
-    expect(gateAfter.status).toBe(200);
-    const gateAfterBody = (await gateAfter.json()) as { allowed: boolean };
-    expect(gateAfterBody.allowed).toBe(true);
 
     // 2. admin login
     const adminLogin = await req("/api/auth/admin-login", {

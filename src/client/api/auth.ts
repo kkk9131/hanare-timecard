@@ -79,36 +79,6 @@ export async function kioskLogin(employeeId: number, signal?: AbortSignal): Prom
   );
 }
 
-const adminGateStatusSchema = z.object({
-  allowed: z.boolean(),
-  expires_at: z.number().nullable().optional(),
-});
-
-export type AdminGateStatus = z.infer<typeof adminGateStatusSchema>;
-
-const adminGateRequestSchema = z.object({
-  pin: z.string().regex(/^\d{4,6}$/u, "PIN は 4〜6 桁の数字で入力してください"),
-});
-
-const adminGateResponseSchema = z.object({
-  ok: z.literal(true),
-  expires_at: z.number(),
-});
-
-export type AdminGateResponse = z.infer<typeof adminGateResponseSchema>;
-
-export async function fetchAdminGateStatus(signal?: AbortSignal): Promise<AdminGateStatus> {
-  return apiClient.get("/api/auth/admin-gate-status", adminGateStatusSchema, signal);
-}
-
-export async function unlockAdminGate(
-  body: z.infer<typeof adminGateRequestSchema>,
-  signal?: AbortSignal,
-): Promise<AdminGateResponse> {
-  const parsed = adminGateRequestSchema.parse(body);
-  return apiClient.post("/api/auth/admin-gate", adminGateResponseSchema, parsed, signal);
-}
-
 export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
 }

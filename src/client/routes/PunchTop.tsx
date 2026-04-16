@@ -1,18 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  fetchPublicEmployees,
-  kioskLogin,
-  type PublicEmployee,
-  unlockAdminGate,
-} from "../api/auth";
+import { fetchPublicEmployees, kioskLogin, type PublicEmployee } from "../api/auth";
 import type { ApiError } from "../api/client";
 import { StoreSwitcher, type StoreFilter as StoreSwitcherValue } from "../components/StoreSwitcher";
 import { BigClock } from "../components/ui/BigClock";
 import { EmployeeTile } from "../components/ui/EmployeeTile";
 import { Heading } from "../components/ui/Heading";
-import { Modal } from "../components/ui/Modal";
 import { ShojiTransition } from "../components/ui/ShojiTransition";
 import { Inline, Stack } from "../components/ui/Stack";
 import { SumiButton } from "../components/ui/SumiButton";
@@ -38,9 +32,6 @@ export function PunchTop() {
   const setSession = useKioskStore((s) => s.setSession);
   const [submittingEmployeeId, setSubmittingEmployeeId] = useState<number | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [adminGateOpen, setAdminGateOpen] = useState(false);
-  const [adminPin, setAdminPin] = useState("");
-  const [adminPinSubmitted, setAdminPinSubmitted] = useState(false);
 
   const employeesQuery = useQuery<PublicEmployee[], ApiError>({
     queryKey: ["public-employees"],
@@ -79,17 +70,6 @@ export function PunchTop() {
     [],
   );
 
-  const adminGateMutation = useMutation({
-    mutationFn: (pin: string) => unlockAdminGate({ pin }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["auth", "admin-gate-status"] });
-      setAdminGateOpen(false);
-      setAdminPin("");
-      setAdminPinSubmitted(false);
-      navigate("/admin/login");
-    },
-  });
-
   const onSelect = async (emp: PublicEmployee) => {
     selectEmployee(emp);
     setLoginError(null);
@@ -109,23 +89,6 @@ export function PunchTop() {
     }
   };
 
-  const closeAdminGate = () => {
-    setAdminGateOpen(false);
-    setAdminPin("");
-    setAdminPinSubmitted(false);
-    adminGateMutation.reset();
-  };
-
-  const submitAdminGate = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setAdminPinSubmitted(true);
-    if (!/^\d{4,6}$/.test(adminPin)) return;
-    adminGateMutation.mutate(adminPin);
-  };
-
-  const adminPinEmpty = adminPinSubmitted && adminPin.length === 0;
-  const adminPinInvalid = adminPinSubmitted && adminPin.length > 0 && !/^\d{4,6}$/.test(adminPin);
-
   return (
     <ShojiTransition transitionKey="K01">
       <Stack gap={7} style={{ paddingTop: "var(--space-3)" }}>
@@ -139,7 +102,7 @@ export function PunchTop() {
               includeAll={false}
             />
           </div>
-          <SumiButton variant="secondary" size="md" onClick={() => setAdminGateOpen(true)}>
+          <SumiButton variant="secondary" size="md" onClick={() => navigate("/admin/login")}>
             管理者画面へ
           </SumiButton>
         </div>
@@ -148,7 +111,7 @@ export function PunchTop() {
         <Inline justify="space-between" align="flex-start">
           <Stack gap={3}>
             <Heading level={1} eyebrow="SUZUMEAN ／ TIMECARD">
-              ようこそ、雀庵へ
+              お疲れさまです
             </Heading>
             <p
               style={{
@@ -245,81 +208,6 @@ export function PunchTop() {
             打刻画面へ進んでいます…
           </p>
         ) : null}
-
-        <Modal
-          open={adminGateOpen}
-          onClose={closeAdminGate}
-          eyebrow="PIN"
-          title="管理者画面へ進む"
-          maxWidth="520px"
-          footer={
-            <>
-              <SumiButton
-                variant="ghost"
-                onClick={closeAdminGate}
-                disabled={adminGateMutation.isPending}
-              >
-                戻る
-              </SumiButton>
-              <SumiButton
-                variant="primary"
-                form="admin-gate-form"
-                type="submit"
-                disabled={adminGateMutation.isPending}
-              >
-                {adminGateMutation.isPending ? "確認しています…" : "管理者ログインへ"}
-              </SumiButton>
-            </>
-          }
-        >
-          <form
-            id="admin-gate-form"
-            className="wa-kiosk-top__admin-form"
-            onSubmit={submitAdminGate}
-          >
-            <Stack gap={4}>
-              <p className="wa-kiosk-top__admin-copy">
-                共用端末から管理者画面へ進む前に、管理者用 PIN をご入力ください。
-              </p>
-
-              <label className="wa-kiosk-top__field">
-                <span className="wa-kiosk-top__field-label">管理者 PIN</span>
-                <input
-                  className={`wa-kiosk-top__pin-input ${
-                    adminPinEmpty || adminPinInvalid ? "is-invalid" : ""
-                  }`}
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  enterKeyHint="done"
-                  maxLength={6}
-                  data-autofocus="true"
-                  placeholder="4〜6桁の数字"
-                  value={adminPin}
-                  onChange={(event) =>
-                    setAdminPin(event.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  aria-invalid={adminPinEmpty || adminPinInvalid}
-                  disabled={adminGateMutation.isPending}
-                />
-                {adminPinEmpty ? (
-                  <span className="wa-kiosk-top__field-error">PIN をご入力ください。</span>
-                ) : null}
-                {adminPinInvalid ? (
-                  <span className="wa-kiosk-top__field-error">
-                    PIN は 4〜6 桁の数字でご入力ください。
-                  </span>
-                ) : null}
-              </label>
-
-              {adminGateMutation.isError ? (
-                <div className="wa-kiosk-top__admin-error" role="alert">
-                  PIN が違います。もう一度ご確認ください。
-                </div>
-              ) : null}
-            </Stack>
-          </form>
-        </Modal>
       </Stack>
     </ShojiTransition>
   );

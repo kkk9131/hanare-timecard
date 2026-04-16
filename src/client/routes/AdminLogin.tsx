@@ -1,8 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { type AdminLoginResponse, adminLogin } from "../api/admin";
-import { fetchAdminGateStatus } from "../api/auth";
 import type { ApiError } from "../api/client";
 import { Heading } from "../components/ui/Heading";
 import { Logo } from "../components/ui/Logo";
@@ -40,13 +39,6 @@ export function AdminLoginPage() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitted, setSubmitted] = useState(false);
 
-  const gateQuery = useQuery({
-    queryKey: ["auth", "admin-gate-status"],
-    queryFn: ({ signal }) => fetchAdminGateStatus(signal),
-    staleTime: 30_000,
-    retry: false,
-  });
-
   const mutation = useMutation<AdminLoginResponse, ApiError, FormState>({
     mutationFn: (body) => adminLogin(body),
     onSuccess: async () => {
@@ -60,23 +52,6 @@ export function AdminLoginPage() {
   // 失敗時は err 表示。成功は AuthGuard が次画面を守る。
   if (mutation.isSuccess) {
     return <Navigate to="/admin" replace />;
-  }
-
-  if (gateQuery.isLoading) {
-    return (
-      <div className="wa-admin-login">
-        <div className="wa-admin-login__bg" aria-hidden="true" />
-        <main className="wa-admin-login__main">
-          <WashiCard padding="lg" className="wa-admin-login__card" eyebrow="CHECK" title="確認中">
-            <p className="wa-admin-login__lede">管理者入口の確認をしています…</p>
-          </WashiCard>
-        </main>
-      </div>
-    );
-  }
-
-  if (gateQuery.isError || !gateQuery.data?.allowed) {
-    return <Navigate to="/" replace />;
   }
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {

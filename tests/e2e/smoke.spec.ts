@@ -16,13 +16,12 @@ import { expect, test } from "@playwright/test";
  *   5. K04 → auto-back to K01
  *   6. K01 same staff → そのまま K03
  *   7. K03 退勤する → confirm → K04
- *   8. トップ画面から管理者入口PIN → oyakata / hanare2026 → /admin dashboard
+ *   8. トップ画面から管理者ログイン画面へ → oyakata / hanare2026 → /admin dashboard
  *   9. dashboard 「現在勤務中の従業員」 KPI visible
  *  10. /admin/exports → 「今月をエクスポート」 → download capture (.xlsx, size > 0)
  */
 
 const STAFF_NAME = "山田 太郎";
-const ADMIN_GATE_PIN = "9999";
 const ADMIN_LOGIN_ID = "oyakata";
 const ADMIN_PASSWORD = "hanare2026";
 
@@ -80,7 +79,7 @@ test.describe("task-6003 smoke", () => {
     await page.waitForURL("**/", { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
 
-    // ---- Step 8: トップ画面から管理者入口PIN → /admin/login ----
+    // ---- Step 8: トップ画面から /admin/login ----
     const browser = context.browser();
     if (!browser) {
       throw new Error("browser context is not available");
@@ -89,8 +88,6 @@ test.describe("task-6003 smoke", () => {
     const adminPage = await adminContext.newPage();
     await adminPage.goto("/");
     await adminPage.getByRole("button", { name: "管理者画面へ" }).click();
-    await adminPage.getByLabel("管理者 PIN").fill(ADMIN_GATE_PIN);
-    await adminPage.getByRole("button", { name: "管理者ログインへ" }).click();
     await expect(adminPage.getByRole("heading", { name: /雀庵 管理画面/ })).toBeVisible();
     await adminPage.locator('input[name="login_id"]').fill(ADMIN_LOGIN_ID);
     await adminPage.locator('input[name="password"]').fill(ADMIN_PASSWORD);

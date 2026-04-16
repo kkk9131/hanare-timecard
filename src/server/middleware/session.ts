@@ -2,17 +2,14 @@ import { eq } from "drizzle-orm";
 import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { db, schema } from "../db/client.js";
-import { generateSessionId, sign, unsign } from "../lib/crypto.js";
+import { generateSessionId } from "../lib/crypto.js";
 
 export const SESSION_COOKIE_NAME = "hanare_sid";
-export const ADMIN_GATE_COOKIE_NAME = "hanare_admin_gate";
 
 /** TTL for kiosk punch sessions: 5 minutes. */
 export const KIOSK_SESSION_TTL_MS = 5 * 60 * 1000;
 /** TTL for admin/manager sessions: 2 hours (sliding). */
 export const ADMIN_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
-/** TTL for the admin entrance PIN gate on the kiosk top screen. */
-export const ADMIN_GATE_TTL_MS = 10 * 60 * 1000;
 
 export type Role = "staff" | "manager" | "admin";
 
@@ -120,40 +117,4 @@ function writeSessionCookie(c: Context, id: string, expiresAt: number): void {
     secure,
     expires: new Date(expiresAt),
   });
-}
-
-export function grantAdminGate(c: Context, now: number = Date.now()): number {
-  const expiresAt = now + ADMIN_GATE_TTL_MS;
-  const secure = process.env.HANARE_TLS === "1";
-  setCookie(c, ADMIN_GATE_COOKIE_NAME, sign(String(expiresAt)), {
-    httpOnly: true,
-    sameSite: "Lax",
-    path: "/",
-    secure,
-    expires: new Date(expiresAt),
-  });
-  return expiresAt;
-}
-
-export function revokeAdminGate(c: Context): void {
-  deleteCookie(c, ADMIN_GATE_COOKIE_NAME, { path: "/" });
-}
-
-export function readAdminGate(c: Context, now: number = Date.now()): number | null {
-  const raw = getCookie(c, ADMIN_GATE_COOKIE_NAME);
-  if (!raw) return null;
-
-  const value = unsign(raw);
-  if (!value) {
-    revokeAdminGate(c);
-    return null;
-  }
-
-  const expiresAt = Number.parseInt(value, 10);
-  if (!Number.isFinite(expiresAt) || expiresAt <= now) {
-    revokeAdminGate(c);
-    return null;
-  }
-
-  return expiresAt;
 }
