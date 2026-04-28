@@ -187,6 +187,7 @@ export function AdminShiftsPage() {
   }
 
   function closeModal() {
+    setConfirmState(null);
     setEditor(null);
     setModalError(null);
   }
@@ -547,15 +548,18 @@ export function AdminShiftsPage() {
           end={modalEnd}
           error={modalError}
           isPending={createMut.isPending || updateMut.isPending || deleteMut.isPending}
+          deleteConfirmOpen={confirmState?.kind === "delete"}
           onChangeStart={setModalStart}
           onChangeEnd={setModalEnd}
           onSubmit={handleSubmitModal}
           onDelete={handleDelete}
+          onCancelDelete={() => setConfirmState(null)}
+          onConfirmDelete={handleConfirmAction}
           onClose={closeModal}
         />
       ) : null}
 
-      {confirmState ? (
+      {confirmState?.kind === "publish" ? (
         <ShiftConfirmModal
           state={confirmState}
           isPending={deleteMut.isPending || publishMut.isPending}
@@ -652,10 +656,13 @@ function ShiftEditorModal({
   end,
   error,
   isPending,
+  deleteConfirmOpen,
   onChangeStart,
   onChangeEnd,
   onSubmit,
   onDelete,
+  onCancelDelete,
+  onConfirmDelete,
   onClose,
 }: {
   editor: EditorState;
@@ -664,25 +671,43 @@ function ShiftEditorModal({
   end: string;
   error: string | null;
   isPending: boolean;
+  deleteConfirmOpen: boolean;
   onChangeStart: (v: string) => void;
   onChangeEnd: (v: string) => void;
   onSubmit: () => void;
   onDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
   onClose: () => void;
 }) {
   const empId = editor.kind === "create" ? editor.employeeId : editor.shift.employee_id;
   const date = editor.kind === "create" ? editor.date : editor.shift.date;
   const emp = employees.find((e) => e.id === empId);
-  const title = editor.kind === "create" ? "シフトを追加" : "シフトを編集";
+  const isDeleteConfirming = editor.kind === "edit" && deleteConfirmOpen;
+  const title = isDeleteConfirming
+    ? "シフトを削除しますか"
+    : editor.kind === "create"
+      ? "シフトを追加"
+      : "シフトを編集";
   const isPublished = editor.kind === "edit" && editor.shift.status === "published";
+  const deleteDescription =
+    editor.kind === "edit"
+      ? `${editor.shift.date} ${editor.shift.start_time.slice(0, 5)}–${editor.shift.end_time.slice(0, 5)} の下書きシフトを削除します。`
+      : "";
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (deleteConfirmOpen) {
+          onCancelDelete();
+        } else {
+          onClose();
+        }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [deleteConfirmOpen, onCancelDelete, onClose]);
 
   return (
     <div className="wa-shifts__modal-backdrop">
@@ -694,47 +719,74 @@ function ShiftEditorModal({
       />
       <div className="wa-shifts__modal" role="dialog" aria-modal="true" aria-label={title}>
         <h3>{title}</h3>
-        <p className="wa-shifts__modal-meta">
-          {emp?.name ?? `従業員 #${empId}`} ／ {date}
-          {isPublished ? "（公開済み）" : ""}
-        </p>
+        {isDeleteConfirming ? (
+          <>
+            <p className="wa-shifts__modal-meta">{deleteDescription}</p>
+            {error ? <p className="wa-shifts__modal-error">{error}</p> : null}
+            <div className="wa-shifts__modal-actions">
+              <SumiButton
+                variant="ghost"
+                onClick={onCancelDelete}
+                disabled={isPending}
+                aria-label="シフト削除をキャンセル"
+              >
+                キャンセル
+              </SumiButton>
+              <SumiButton
+                variant="danger"
+                onClick={onConfirmDelete}
+                disabled={isPending}
+                aria-label="シフト削除を確定"
+              >
+                削除を確定
+              </SumiButton>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="wa-shifts__modal-meta">
+              {emp?.name ?? `従業員 #${empId}`} ／ {date}
+              {isPublished ? "（公開済み）" : ""}
+            </p>
 
-        <div className="wa-shifts__modal-row">
-          <label htmlFor="shift-start">開始</label>
-          <input
-            id="shift-start"
-            data-testid="shift-start-time"
-            type="time"
-            value={start}
-            onChange={(e) => onChangeStart(e.target.value)}
-          />
-        </div>
-        <div className="wa-shifts__modal-row">
-          <label htmlFor="shift-end">終了</label>
-          <input
-            id="shift-end"
-            data-testid="shift-end-time"
-            type="time"
-            value={end}
-            onChange={(e) => onChangeEnd(e.target.value)}
-          />
-        </div>
+            <div className="wa-shifts__modal-row">
+              <label htmlFor="shift-start">開始</label>
+              <input
+                id="shift-start"
+                data-testid="shift-start-time"
+                type="time"
+                value={start}
+                onChange={(e) => onChangeStart(e.target.value)}
+              />
+            </div>
+            <div className="wa-shifts__modal-row">
+              <label htmlFor="shift-end">終了</label>
+              <input
+                id="shift-end"
+                data-testid="shift-end-time"
+                type="time"
+                value={end}
+                onChange={(e) => onChangeEnd(e.target.value)}
+              />
+            </div>
 
-        {error ? <p className="wa-shifts__modal-error">{error}</p> : null}
+            {error ? <p className="wa-shifts__modal-error">{error}</p> : null}
 
-        <div className="wa-shifts__modal-actions">
-          {editor.kind === "edit" && !isPublished ? (
-            <SumiButton variant="danger" onClick={onDelete} disabled={isPending}>
-              削除
-            </SumiButton>
-          ) : null}
-          <SumiButton variant="ghost" onClick={onClose} disabled={isPending}>
-            キャンセル
-          </SumiButton>
-          <SumiButton variant="primary" onClick={onSubmit} disabled={isPending}>
-            {editor.kind === "create" ? "追加する" : "更新する"}
-          </SumiButton>
-        </div>
+            <div className="wa-shifts__modal-actions">
+              {editor.kind === "edit" && !isPublished ? (
+                <SumiButton variant="danger" onClick={onDelete} disabled={isPending}>
+                  削除
+                </SumiButton>
+              ) : null}
+              <SumiButton variant="ghost" onClick={onClose} disabled={isPending}>
+                キャンセル
+              </SumiButton>
+              <SumiButton variant="primary" onClick={onSubmit} disabled={isPending}>
+                {editor.kind === "create" ? "追加する" : "更新する"}
+              </SumiButton>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { openAdminShifts, openStaffShiftRequests, STAFF_NAME, toISODate } from "./helpers";
+import {
+  findDraftFreeEmptyShiftCell,
+  findUnusedShiftTime,
+  openAdminShifts,
+  openStaffShiftRequests,
+} from "./helpers";
 
 test.describe("fixtask browser-use E2E improvements", () => {
   test("admin can change shift times, delete through modal, and publish through modal", async ({
@@ -9,8 +14,8 @@ test.describe("fixtask browser-use E2E improvements", () => {
 
     await openAdminShifts(page);
 
-    const today = toISODate(new Date());
-    await page.getByRole("button", { name: `${STAFF_NAME} ${today} にシフトを追加` }).click();
+    const shiftCell = await findDraftFreeEmptyShiftCell(page);
+    await page.getByRole("button", { name: shiftCell.addButtonName }).click();
     await expect(page.getByRole("dialog", { name: "シフトを追加" })).toBeVisible();
     await page.getByTestId("shift-start-time").fill("10:00");
     await page.getByTestId("shift-end-time").fill("18:00");
@@ -29,21 +34,25 @@ test.describe("fixtask browser-use E2E improvements", () => {
     await page.getByRole("button", { name: "下書き 11:00-19:00" }).click();
     await page.getByRole("button", { name: "削除" }).click();
     await expect(page.getByRole("dialog", { name: "シフトを削除しますか" })).toBeVisible();
+    await expect(page.locator('[role="dialog"][aria-modal="true"]')).toHaveCount(1);
     await page.getByRole("button", { name: "シフト削除を確定" }).click();
     await expect(page.getByRole("button", { name: "下書き 11:00-19:00" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: `${STAFF_NAME} ${today} にシフトを追加` }).click();
-    await page.getByTestId("shift-start-time").fill("12:00");
-    await page.getByTestId("shift-end-time").fill("20:00");
+    await page.getByRole("button", { name: shiftCell.addButtonName }).click();
+    const publishedTime = await findUnusedShiftTime(page);
+    await page.getByTestId("shift-start-time").fill(publishedTime.start);
+    await page.getByTestId("shift-end-time").fill(publishedTime.end);
     await page.getByRole("button", { name: "追加する" }).click();
-    await expect(page.getByRole("button", { name: "下書き 12:00-20:00" })).toBeVisible();
+    await expect(page.getByRole("button", { name: `下書き ${publishedTime.range}` })).toBeVisible();
 
     await page.getByRole("button", { name: "この週を公開する" }).click();
     await expect(page.getByRole("dialog", { name: "下書きを公開しますか" })).toBeVisible();
     await page.getByRole("button", { name: "シフト公開を確定" }).click();
 
     await expect(page.getByText(/直近\s+1\s+件公開しました/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "公開済み 12:00-20:00" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `公開済み ${publishedTime.range}` }),
+    ).toBeVisible();
   });
 
   test("staff can withdraw a shift request through an app modal", async ({ page }) => {
