@@ -27,6 +27,7 @@ export type Me = {
   id: number;
   name: string;
   role: EmployeeProfile["role"];
+  store_ids: number[];
 };
 
 export async function fetchMe(signal?: AbortSignal): Promise<Me> {
@@ -35,6 +36,7 @@ export async function fetchMe(signal?: AbortSignal): Promise<Me> {
     id: data.employee.id,
     name: data.employee.name,
     role: data.employee.role,
+    store_ids: data.employee.store_ids,
   };
 }
 

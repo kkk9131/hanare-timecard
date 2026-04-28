@@ -276,6 +276,7 @@ export type CorrectionStatus = z.infer<typeof correctionStatusSchema>;
 export const correctionSchema = z.object({
   id: z.number(),
   employee_id: z.number(),
+  store_id: z.number(),
   target_punch_id: z.number().nullable().optional(),
   target_date: z.string().optional(),
   requested_value: z.number().nullable().optional(),

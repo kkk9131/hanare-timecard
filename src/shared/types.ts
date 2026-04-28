@@ -117,6 +117,7 @@ export interface ShiftRequest {
 export interface CorrectionRequest {
   id: number;
   employee_id: number;
+  store_id: number;
   target_punch_id: number | null;
   target_date: string;
   requested_value: number | null;

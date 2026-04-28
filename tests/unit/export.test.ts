@@ -6,10 +6,11 @@
  * - toXlsx が xlsx の magic bytes (PK) を含む Buffer を返すこと
  */
 
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { applyAllMigrations } from "../helpers/migrations.js";
 
 const TMP_DIR = mkdtempSync(join(tmpdir(), "hanare-export-"));
 process.env.HANARE_DB_PATH = join(TMP_DIR, "export.db");
@@ -18,16 +19,7 @@ const { db, schema } = await import("../../src/server/db/client.js");
 const { buildPeriodSummary, toCsv, toXlsx } = await import("../../src/server/services/exports.js");
 
 function applyMigrations(): void {
-  const sqlPath = resolve("drizzle/0000_init.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  const statements = sql
-    .split(/-->\s*statement-breakpoint/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of statements) {
-    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-    (db as any).$client.exec(stmt);
-  }
+  applyAllMigrations(db);
 }
 
 function clear(): void {

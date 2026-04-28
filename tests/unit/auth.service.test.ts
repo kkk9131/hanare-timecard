@@ -1,9 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { applyAllMigrations } from "../helpers/migrations.js";
 
 // IMPORTANT: HANARE_DB_PATH must be set BEFORE importing modules that touch
 // `src/server/db/client.ts`, because that module instantiates a singleton
@@ -33,17 +34,7 @@ function sqliteClient(): TestSqliteClient {
 }
 
 function applyMigrations(): void {
-  // Replicate scripts/migrate.ts inline so this test can keep using one DB connection.
-  const sqlPath = resolve("drizzle/0000_init.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  const statements = sql
-    .split(/-->\s*statement-breakpoint/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  // Use the same underlying sqlite handle through drizzle.
-  for (const stmt of statements) {
-    sqliteClient().exec(stmt);
-  }
+  applyAllMigrations(db);
 }
 
 function clearTables(): void {

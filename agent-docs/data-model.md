@@ -12,6 +12,7 @@ employees 1 ── * sessions
 employees 1 ── * audit_logs (actor)
 stores    1 ── * time_punches
 stores    1 ── * shifts
+stores    1 ── * correction_requests
 ```
 
 `User` は仕様 7.User 注記の通り **Employee.role に統合**する (`staff` / `manager` / `admin`)。管理者ログインは Employee の `login_id` + `password_hash` を使う。
@@ -131,6 +132,7 @@ CREATE INDEX idx_shift_req_date ON shift_requests(date);
 CREATE TABLE correction_requests (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   employee_id     INTEGER NOT NULL REFERENCES employees(id),
+  store_id        INTEGER NOT NULL REFERENCES stores(id), -- 申請対象店舗
   target_punch_id INTEGER REFERENCES time_punches(id),
   target_date     TEXT NOT NULL,
   requested_value INTEGER,                  -- unix ms 修正後時刻
@@ -144,6 +146,7 @@ CREATE TABLE correction_requests (
 );
 CREATE INDEX idx_corrections_status ON correction_requests(status);
 CREATE INDEX idx_corrections_emp ON correction_requests(employee_id);
+CREATE INDEX idx_corrections_store ON correction_requests(store_id);
 ```
 
 ### audit_logs

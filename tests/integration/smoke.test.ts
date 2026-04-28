@@ -13,11 +13,12 @@
  * - A dedicated DB path is wired via `HANARE_DB_PATH` BEFORE importing the
  *   server modules, so the singleton `db` client binds to the isolated file.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import bcrypt from "bcrypt";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { applyAllMigrations } from "../helpers/migrations.js";
 
 const TMP_DIR = mkdtempSync(join(tmpdir(), "hanare-e2e-"));
 const DB_PATH = join(TMP_DIR, "hanare-e2e.db");
@@ -30,16 +31,7 @@ const { createApp } = await import("../../src/server/app.js");
 const app = createApp();
 
 function applyMigrations(): void {
-  const sqlPath = resolve("drizzle/0000_init.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  const statements = sql
-    .split(/-->\s*statement-breakpoint/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of statements) {
-    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-    (db as any).$client.exec(stmt);
-  }
+  applyAllMigrations(db);
 }
 
 function seedMinimal(): { storeId: number; adminId: number } {
@@ -244,6 +236,7 @@ describe("task-6003 smoke: primary end-to-end flow", () => {
       method: "POST",
       cookie: staffCookie,
       body: JSON.stringify({
+        store_id: 1,
         target_date: "2026-04-05",
         requested_type: "clock_in",
         // 2026-04-05 17:00 JST, expressed as a concrete unix ms value

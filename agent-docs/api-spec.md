@@ -109,9 +109,15 @@ POST /api/auth/kiosk-login
 | ------ | ---------------------------- | -------- | -------------------------- |
 | GET    | /api/corrections             | manager+ | `?status=&store_id=`。manager は自店舗のみ |
 | GET    | /api/corrections/me          | 認証     | 自分の申請 |
-| POST   | /api/corrections             | 認証     | 自分の申請 |
+| POST   | /api/corrections             | 認証     | 自分の申請。新規打刻申請は `store_id` 必須 |
 | POST   | /api/corrections/:id/approve | manager+ | 承認 → 打刻反映 + 監査ログ。manager は自店舗のみ |
 | POST   | /api/corrections/:id/reject  | manager+ | `{review_comment}` 必須。manager は自店舗のみ |
+
+`POST /api/corrections`:
+
+- `store_id`: 申請対象店舗。`target_punch_id` がない打刻漏れ申請では必須。本人が所属していない店舗は 403。
+- `target_punch_id`: 既存打刻を修正する場合に指定。`store_id` も送られた場合は、対象打刻の店舗と一致する必要がある。
+- 一覧・承認・却下の権限判定は、まず `correction_requests.store_id` を見て判断する。
 
 ### Exports
 

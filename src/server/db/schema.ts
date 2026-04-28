@@ -139,6 +139,9 @@ export const correctionRequests = sqliteTable(
     employeeId: integer("employee_id")
       .notNull()
       .references(() => employees.id),
+    storeId: integer("store_id")
+      .notNull()
+      .references(() => stores.id),
     targetPunchId: integer("target_punch_id").references(() => timePunches.id),
     targetDate: text("target_date").notNull(),
     requestedValue: integer("requested_value"),
@@ -157,6 +160,7 @@ export const correctionRequests = sqliteTable(
     ),
     index("idx_corrections_status").on(table.status),
     index("idx_corrections_emp").on(table.employeeId),
+    index("idx_corrections_store").on(table.storeId),
   ],
 );
 

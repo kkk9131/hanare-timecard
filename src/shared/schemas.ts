@@ -215,13 +215,24 @@ export const listShiftRequestsQuerySchema = z.object({
 
 // ---------- Correction Requests ----------
 
-export const createCorrectionSchema = z.object({
-  target_punch_id: idSchema.nullable().optional(),
-  target_date: dateStringSchema,
-  requested_value: unixMsSchema.nullable().optional(),
-  requested_type: punchTypeSchema.nullable().optional(),
-  reason: z.string().min(1).max(1024),
-});
+export const createCorrectionSchema = z
+  .object({
+    store_id: idSchema.nullable().optional(),
+    target_punch_id: idSchema.nullable().optional(),
+    target_date: dateStringSchema,
+    requested_value: unixMsSchema.nullable().optional(),
+    requested_type: punchTypeSchema.nullable().optional(),
+    reason: z.string().min(1).max(1024),
+  })
+  .superRefine((v, ctx) => {
+    if (v.target_punch_id == null && v.store_id == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["store_id"],
+        message: "store_id is required when target_punch_id is empty",
+      });
+    }
+  });
 
 export const approveCorrectionSchema = z.object({
   review_comment: z.string().max(1024).optional(),
