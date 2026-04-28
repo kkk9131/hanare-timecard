@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createShift,
   deleteShift,
@@ -67,6 +67,10 @@ type ViewMode = "week" | "month";
 type EditorState =
   | { kind: "create"; date: string; employeeId: number }
   | { kind: "edit"; shift: Shift };
+
+type ConfirmState =
+  | { kind: "delete"; shift: Shift }
+  | { kind: "publish"; draftCount: number; storeId: number; from: string; to: string };
 
 // ---------- main ----------
 
@@ -166,6 +170,7 @@ export function AdminShiftsPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalStart, setModalStart] = useState("09:00");
   const [modalEnd, setModalEnd] = useState("17:00");
+  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
 
   function openCreate(date: string, employeeId: number) {
     setEditor({ kind: "create", date, employeeId });
@@ -281,8 +286,7 @@ export function AdminShiftsPage() {
       setModalError("公開済みのシフトは削除できません。");
       return;
     }
-    if (!window.confirm("このシフトを削除します。よろしいですか？")) return;
-    deleteMut.mutate(editor.shift.id);
+    setConfirmState({ kind: "delete", shift: editor.shift });
   }
 
   function handlePublish() {
@@ -292,13 +296,29 @@ export function AdminShiftsPage() {
       window.alert("公開できる下書きがありません。");
       return;
     }
-    if (!window.confirm(`${draftCount} 件のシフトを公開します。よろしいですか？`)) {
-      return;
-    }
-    publishMut.mutate({
-      store_id: activeStoreId,
+    setConfirmState({
+      kind: "publish",
+      draftCount,
+      storeId: activeStoreId,
       from: fromISO,
       to: toISOStr,
+    });
+  }
+
+  function handleConfirmAction() {
+    if (!confirmState) return;
+    if (confirmState.kind === "delete") {
+      const shiftId = confirmState.shift.id;
+      setConfirmState(null);
+      deleteMut.mutate(shiftId);
+      return;
+    }
+    const { storeId, from, to } = confirmState;
+    setConfirmState(null);
+    publishMut.mutate({
+      store_id: storeId,
+      from,
+      to,
     });
   }
 
@@ -534,6 +554,15 @@ export function AdminShiftsPage() {
           onClose={closeModal}
         />
       ) : null}
+
+      {confirmState ? (
+        <ShiftConfirmModal
+          state={confirmState}
+          isPending={deleteMut.isPending || publishMut.isPending}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={handleConfirmAction}
+        />
+      ) : null}
     </div>
   );
 }
@@ -674,6 +703,7 @@ function ShiftEditorModal({
           <label htmlFor="shift-start">開始</label>
           <input
             id="shift-start"
+            data-testid="shift-start-time"
             type="time"
             value={start}
             onChange={(e) => onChangeStart(e.target.value)}
@@ -683,6 +713,7 @@ function ShiftEditorModal({
           <label htmlFor="shift-end">終了</label>
           <input
             id="shift-end"
+            data-testid="shift-end-time"
             type="time"
             value={end}
             onChange={(e) => onChangeEnd(e.target.value)}
@@ -702,6 +733,87 @@ function ShiftEditorModal({
           </SumiButton>
           <SumiButton variant="primary" onClick={onSubmit} disabled={isPending}>
             {editor.kind === "create" ? "追加する" : "更新する"}
+          </SumiButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ShiftConfirmModal({
+  state,
+  isPending,
+  onCancel,
+  onConfirm,
+}: {
+  state: ConfirmState;
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const isDelete = state.kind === "delete";
+  const title = isDelete ? "シフトを削除しますか" : "下書きを公開しますか";
+  const confirmLabel = isDelete ? "削除を確定" : "公開を確定";
+  const confirmAriaLabel = isDelete ? "シフト削除を確定" : "シフト公開を確定";
+  const cancelAriaLabel = isDelete ? "シフト削除をキャンセル" : "シフト公開をキャンセル";
+  const description = isDelete
+    ? `${state.shift.date} ${state.shift.start_time.slice(0, 5)}–${state.shift.end_time.slice(0, 5)} の下書きシフトを削除します。`
+    : `${state.draftCount} 件の下書きシフトを公開します。公開後は従業員側にも表示されます。`;
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    }
+    window.addEventListener("keydown", onKey, true);
+    panelRef.current
+      ?.querySelector<HTMLElement>("[data-autofocus='true'], button, [tabindex]")
+      ?.focus();
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onCancel]);
+
+  return (
+    <div className="wa-shifts__modal-backdrop">
+      <button
+        type="button"
+        className="wa-shifts__modal-backdrop-btn"
+        aria-label="確認を閉じる"
+        onClick={onCancel}
+      />
+      <div
+        ref={panelRef}
+        className="wa-shifts__modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shift-confirm-title"
+        aria-describedby="shift-confirm-description"
+        tabIndex={-1}
+      >
+        <h3 id="shift-confirm-title">{title}</h3>
+        <p id="shift-confirm-description" className="wa-shifts__modal-meta">
+          {description}
+        </p>
+        <div className="wa-shifts__modal-actions">
+          <SumiButton
+            variant="ghost"
+            onClick={onCancel}
+            disabled={isPending}
+            aria-label={cancelAriaLabel}
+          >
+            キャンセル
+          </SumiButton>
+          <SumiButton
+            variant={isDelete ? "danger" : "primary"}
+            onClick={onConfirm}
+            disabled={isPending}
+            aria-label={confirmAriaLabel}
+            data-autofocus="true"
+          >
+            {confirmLabel}
           </SumiButton>
         </div>
       </div>
