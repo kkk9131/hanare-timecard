@@ -13,6 +13,8 @@
 
 2 店舗で使う場合は、**1 台の本番サーバー PC にデータを集約し、各店舗の PC / iPad からブラウザで打刻する**運用を推奨する。
 
+初めて本番運用を始める場合は、先に [初回オンボーディング](docs/onboarding.md) を使って、端末・権限・打刻・月次エクスポート・バックアップを順番に確認する。
+
 ```text
 本店の打刻端末   ─┐
                  ├─> 本番サーバー PC ─> data/hanare.db ─> 月末 Excel 出力
@@ -402,6 +404,7 @@ cp data/backups/hanare-20260406-030000.db data/hanare.db
 
 ## 関連ドキュメント
 
+- [docs/onboarding.md](docs/onboarding.md) - 初回オンボーディング (本番開始前の確認)
 - [docs/operations.md](docs/operations.md) - 運用手順 (日次/月次/障害対応)
 - [docs/development.md](docs/development.md) - 開発者向け (構成・追加手順)
 - [agent-docs/spec.md](agent-docs/spec.md) - 要件仕様
