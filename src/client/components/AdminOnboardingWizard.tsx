@@ -107,6 +107,15 @@ export function getAdminOnboardingSteps(role: AdminOnboardingRole): AdminOnboard
   return ADMIN_ONBOARDING_STEPS.filter((step) => role === "admin" || !step.adminOnly);
 }
 
+export function getBrowserStorage(kind: "localStorage" | "sessionStorage"): Storage | undefined {
+  try {
+    if (typeof window === "undefined") return undefined;
+    return window[kind];
+  } catch {
+    return undefined;
+  }
+}
+
 function readFlag(storage: Storage | undefined, key: string): boolean {
   if (!storage) return false;
   try {
@@ -141,8 +150,8 @@ export function AdminOnboardingWizard({ role }: AdminOnboardingWizardProps) {
 
   useEffect(() => {
     if (!role || steps.length === 0) return;
-    const completed = readFlag(window.localStorage, storageKey);
-    const dismissedThisSession = readFlag(window.sessionStorage, sessionKey);
+    const completed = readFlag(getBrowserStorage("localStorage"), storageKey);
+    const dismissedThisSession = readFlag(getBrowserStorage("sessionStorage"), sessionKey);
     if (!completed && !dismissedThisSession) {
       setOpen(true);
       setStepIndex(0);
@@ -155,12 +164,12 @@ export function AdminOnboardingWizard({ role }: AdminOnboardingWizardProps) {
   }
 
   function closeForNow() {
-    writeFlag(window.sessionStorage, sessionKey);
+    writeFlag(getBrowserStorage("sessionStorage"), sessionKey);
     setOpen(false);
   }
 
   function completeGuide() {
-    writeFlag(window.localStorage, storageKey);
+    writeFlag(getBrowserStorage("localStorage"), storageKey);
     setOpen(false);
   }
 
