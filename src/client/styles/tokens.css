@@ -58,9 +58,11 @@
 
   /* -- Typography ----------------------------------------------- */
   --font-mincho:
-    "Noto Serif JP", "游明朝", "Yu Mincho", "Hiragino Mincho ProN", "ヒラギノ明朝 ProN", serif;
+    "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "ヒラギノ明朝 ProN",
+    "MS PMincho", "MS Mincho", "Noto Serif CJK JP", "Noto Serif JP", serif;
   --font-gothic:
-    "Noto Sans JP", "游ゴシック", "Yu Gothic", "Hiragino Sans", "ヒラギノ角ゴ ProN", system-ui,
+    system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "ヒラギノ角ゴ ProN", "Yu Gothic", "YuGothic", Meiryo, "Noto Sans CJK JP", "Noto Sans JP",
     sans-serif;
 
   --fs-meta: 13px;
