@@ -40,16 +40,13 @@ export function PunchTop() {
   });
 
   const storeIds = KNOWN_STORE_IDS;
+  const activeStoreId = storeFilter === "all" ? (storeIds[0] ?? null) : storeFilter;
 
   // 表示対象 (store filter 適用)
   const visible = useMemo(() => {
     const all = employeesQuery.data ?? [];
-    if (storeFilter === "all") {
-      const firstStoreId = storeIds[0];
-      return firstStoreId != null ? all.filter((e) => e.store_ids.includes(firstStoreId)) : all;
-    }
-    return all.filter((e) => e.store_ids.includes(storeFilter));
-  }, [employeesQuery.data, storeFilter]);
+    return activeStoreId != null ? all.filter((e) => e.store_ids.includes(activeStoreId)) : all;
+  }, [activeStoreId, employeesQuery.data]);
 
   useEffect(() => {
     if (storeFilter !== "all") return;
@@ -77,7 +74,10 @@ export function PunchTop() {
 
     try {
       const result = await kioskLogin(emp.id);
-      setSession(result.employee, result.employee.store_ids[0] ?? null);
+      if (activeStoreId == null || !result.employee.store_ids.includes(activeStoreId)) {
+        throw new Error("Selected employee does not belong to active store");
+      }
+      setSession(result.employee, activeStoreId);
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       navigate("/punch/board");
     } catch {
@@ -126,7 +126,7 @@ export function PunchTop() {
               はじめに、お名前をお選びください。
             </p>
             <p className="wa-kiosk-top__current-store">
-              現在の表示: {storeFilter === "all" ? "本店" : storeShortLabel(storeFilter)}
+              現在の表示: {activeStoreId == null ? "本店" : storeShortLabel(activeStoreId)}
             </p>
           </Stack>
           <BigClock size="lg" seconds showDate />

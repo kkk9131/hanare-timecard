@@ -7,6 +7,7 @@ import {
 } from "../../shared/schemas.js";
 import {
   assertCanAccessEmployee,
+  getUserStoreIds,
   requireAuth,
   requireRole,
   scopeStoreQuery,
@@ -41,6 +42,16 @@ punchesRoutes.post("/", requireAuth, async (c) => {
         details: parsed.error.flatten(),
       },
       400,
+    );
+  }
+
+  if (!getUserStoreIds(user.employeeId).includes(parsed.data.store_id)) {
+    return c.json(
+      {
+        error: "store_forbidden",
+        message: "この従業員は選択された店舗に所属していません",
+      },
+      403,
     );
   }
 
