@@ -1,0 +1,194 @@
+.wa-onboarding-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3);
+  color: var(--kincha-300);
+  background-color: rgba(184, 134, 11, 0.07);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-mincho);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.wa-onboarding-entry:hover {
+  color: var(--washi-50);
+  background-color: rgba(184, 134, 11, 0.14);
+  border-color: var(--kincha-400);
+}
+
+.wa-onboarding-entry__rule {
+  width: 22px;
+  height: 2px;
+  background-color: var(--kincha-500);
+  flex: 0 0 auto;
+}
+
+.wa-onboarding-entry__label {
+  white-space: nowrap;
+}
+
+.wa-onboarding {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.wa-onboarding__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.wa-onboarding__dot {
+  width: 34px;
+  height: 8px;
+  border: 1px solid var(--border-hairline-strong);
+  border-radius: var(--radius-xs);
+  background-color: var(--sumi-700);
+  transition:
+    width var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+
+.wa-onboarding__dot.is-active {
+  width: 56px;
+  background-color: var(--kincha-500);
+  border-color: var(--kincha-400);
+}
+
+.wa-onboarding__count {
+  margin: 0;
+  color: var(--text-meta);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.08em;
+}
+
+.wa-onboarding__title {
+  margin: 0;
+  color: var(--washi-50);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-h2);
+  letter-spacing: var(--ls-mincho);
+  line-height: var(--lh-tight);
+}
+
+.wa-onboarding__lead {
+  max-width: 58ch;
+  color: var(--text-secondary);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.wa-onboarding__checks {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.wa-onboarding__check {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3);
+  background-color: rgba(245, 239, 228, 0.035);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--washi-100);
+  line-height: var(--lh-body);
+}
+
+.wa-onboarding__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 28px;
+  color: var(--sumi-900);
+  background-color: var(--kincha-400);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.08em;
+}
+
+.wa-onboarding__map {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  color: var(--text-meta);
+  background:
+    linear-gradient(90deg, rgba(212, 160, 23, 0.1), transparent 72%), rgba(14, 12, 10, 0.32);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+}
+
+.wa-onboarding__map span:not([aria-hidden="true"]) {
+  color: var(--washi-200);
+}
+
+.wa-onboarding__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.wa-onboarding__route {
+  color: var(--kincha-300);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-gold);
+}
+
+.wa-onboarding__route:hover {
+  color: var(--kincha-400);
+}
+
+.wa-onboarding__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .wa-onboarding__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wa-onboarding__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .wa-onboarding__title {
+    font-size: var(--fs-h3);
+  }
+
+  .wa-onboarding__map {
+    display: none;
+  }
+}
