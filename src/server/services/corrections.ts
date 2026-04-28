@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lte, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, type SQL } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import type { PunchType } from "../lib/time.js";
 import { writeAuditLog } from "./audit.js";
@@ -8,6 +8,7 @@ export type CorrectionStatus = "pending" | "approved" | "rejected";
 export interface CorrectionRow {
   id: number;
   employee_id: number;
+  store_id: number;
   target_punch_id: number | null;
   target_date: string;
   requested_value: number | null;
@@ -24,6 +25,7 @@ function toRow(r: typeof schema.correctionRequests.$inferSelect): CorrectionRow 
   return {
     id: r.id,
     employee_id: r.employeeId,
+    store_id: r.storeId,
     target_punch_id: r.targetPunchId,
     target_date: r.targetDate,
     requested_value: r.requestedValue,
@@ -39,6 +41,7 @@ function toRow(r: typeof schema.correctionRequests.$inferSelect): CorrectionRow 
 
 export interface CreateCorrectionInput {
   employee_id: number;
+  store_id?: number | null;
   target_punch_id?: number | null;
   target_date: string;
   requested_value?: number | null;
@@ -49,7 +52,8 @@ export interface CreateCorrectionInput {
 
 export type CreateCorrectionResult =
   | { kind: "ok"; correction: CorrectionRow }
-  | { kind: "forbidden"; reason: "not_owner" }
+  | { kind: "forbidden"; reason: "not_owner" | "employee_not_assigned_to_store" }
+  | { kind: "invalid_store"; reason: "store_required" | "punch_store_mismatch" }
   | { kind: "not_found"; entity: "punch" };
 
 /**
@@ -57,6 +61,8 @@ export type CreateCorrectionResult =
  * If target_punch_id is provided, the punch must belong to the requester (otherwise 403).
  */
 export function createCorrection(input: CreateCorrectionInput): CreateCorrectionResult {
+  let storeId = input.store_id ?? null;
+
   if (input.target_punch_id != null) {
     const punch = db
       .select()
@@ -67,6 +73,30 @@ export function createCorrection(input: CreateCorrectionInput): CreateCorrection
     if (punch.employeeId !== input.employee_id) {
       return { kind: "forbidden", reason: "not_owner" };
     }
+    if (storeId != null && storeId !== punch.storeId) {
+      return { kind: "invalid_store", reason: "punch_store_mismatch" };
+    }
+    storeId = punch.storeId;
+  } else {
+    if (storeId == null) {
+      return { kind: "invalid_store", reason: "store_required" };
+    }
+    const membership = db
+      .select({ storeId: schema.employeeStores.storeId })
+      .from(schema.employeeStores)
+      .where(
+        and(
+          eq(schema.employeeStores.employeeId, input.employee_id),
+          eq(schema.employeeStores.storeId, storeId),
+        ),
+      )
+      .get();
+    if (!membership) {
+      return { kind: "forbidden", reason: "employee_not_assigned_to_store" };
+    }
+  }
+  if (storeId == null) {
+    return { kind: "invalid_store", reason: "store_required" };
   }
 
   const now = input.now ?? Date.now();
@@ -74,6 +104,7 @@ export function createCorrection(input: CreateCorrectionInput): CreateCorrection
     .insert(schema.correctionRequests)
     .values({
       employeeId: input.employee_id,
+      storeId,
       targetPunchId: input.target_punch_id ?? null,
       targetDate: input.target_date,
       requestedValue: input.requested_value ?? null,
@@ -104,9 +135,8 @@ export interface ListCorrectionsQuery {
 
 /**
  * List correction requests with optional filters.
- * When a request targets an existing punch, store scope follows the punch's store.
- * New-punch requests do not have an explicit store, so they keep the legacy
- * employee assignment scope.
+ * Store scope follows correction_requests.store_id. Legacy rows are backfilled
+ * by migration from the target punch store or employee primary store.
  */
 export function listCorrections(q: ListCorrectionsQuery): CorrectionRow[] {
   const conds: SQL[] = [];
@@ -119,34 +149,7 @@ export function listCorrections(q: ListCorrectionsQuery): CorrectionRow[] {
     q.store_ids != null ? q.store_ids : q.store_id != null ? [q.store_id] : undefined;
   if (scopedStoreIds != null) {
     if (scopedStoreIds.length === 0) return [];
-    const empIds = db
-      .select({ id: schema.employeeStores.employeeId })
-      .from(schema.employeeStores)
-      .where(inArray(schema.employeeStores.storeId, scopedStoreIds))
-      .all()
-      .map((r) => r.id);
-    const punchIds = db
-      .select({ id: schema.timePunches.id })
-      .from(schema.timePunches)
-      .where(inArray(schema.timePunches.storeId, scopedStoreIds))
-      .all()
-      .map((r) => r.id);
-
-    const storeConds: SQL[] = [];
-    if (punchIds.length > 0) {
-      storeConds.push(inArray(schema.correctionRequests.targetPunchId, punchIds));
-    }
-    if (empIds.length > 0) {
-      const newPunchRequestCond = and(
-        isNull(schema.correctionRequests.targetPunchId),
-        inArray(schema.correctionRequests.employeeId, empIds),
-      );
-      if (newPunchRequestCond != null) storeConds.push(newPunchRequestCond);
-    }
-    if (storeConds.length === 0) return [];
-    const storeCond = storeConds.length === 1 ? storeConds[0] : or(...storeConds);
-    if (storeCond == null) return [];
-    conds.push(storeCond);
+    conds.push(inArray(schema.correctionRequests.storeId, scopedStoreIds));
   }
 
   const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
@@ -246,22 +249,11 @@ export function approveCorrection(input: ApproveCorrectionInput): ApproveCorrect
     if (existing.requestedType == null) {
       return { kind: "missing_value" };
     }
-    // Need a store to attach. Use the requester's primary store, fall back to any assigned store.
-    const empStores = db
-      .select()
-      .from(schema.employeeStores)
-      .where(eq(schema.employeeStores.employeeId, existing.employeeId))
-      .all();
-    if (empStores.length === 0) {
-      return { kind: "missing_value" };
-    }
-    const storeRow = empStores.find((s) => s.isPrimary === 1) ?? empStores[0];
-
     afterPunch = db
       .insert(schema.timePunches)
       .values({
         employeeId: existing.employeeId,
-        storeId: storeRow.storeId,
+        storeId: existing.storeId,
         punchType: existing.requestedType,
         punchedAt: existing.requestedValue,
         source: "correction",

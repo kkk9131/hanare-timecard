@@ -1,8 +1,9 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import bcrypt from "bcrypt";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { applyAllMigrations } from "../helpers/migrations.js";
 
 const TMP_DIR = mkdtempSync(join(tmpdir(), "hanare-corrections-test-"));
 const TMP_DB_PATH = join(TMP_DIR, "corrections-test.db");
@@ -15,16 +16,7 @@ const { approveCorrection, createCorrection, listCorrections, rejectCorrection }
 const { createPunch } = await import("../../src/server/services/punches.js");
 
 function applyMigrations(): void {
-  const sqlPath = resolve("drizzle/0000_init.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  const statements = sql
-    .split(/-->\s*statement-breakpoint/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of statements) {
-    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-    (db as any).$client.exec(stmt);
-  }
+  applyAllMigrations(db);
 }
 
 function clearTables(): void {
@@ -95,9 +87,10 @@ beforeEach(() => {
 
 describe("corrections service - createCorrection", () => {
   it("creates a pending correction without target punch", () => {
-    const { staffId } = seed();
+    const { storeId, staffId } = seed();
     const result = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-01",
       requested_value: new Date(2026, 3, 1, 10, 0, 0).getTime(),
       requested_type: "clock_in",
@@ -107,6 +100,7 @@ describe("corrections service - createCorrection", () => {
     if (result.kind !== "ok") return;
     expect(result.correction.status).toBe("pending");
     expect(result.correction.employee_id).toBe(staffId);
+    expect(result.correction.store_id).toBe(storeId);
   });
 
   it("returns forbidden when target punch belongs to another employee", () => {
@@ -126,6 +120,74 @@ describe("corrections service - createCorrection", () => {
       reason: "...",
     });
     expect(result.kind).toBe("forbidden");
+  });
+
+  it("rejects a new-punch correction when the employee is not assigned to the requested store", () => {
+    const { staffId } = seed();
+    db.insert(schema.stores)
+      .values({
+        id: 2,
+        code: "hanare",
+        name: "雀庵 離れ",
+        displayName: "雀庵 離れ",
+        openingTime: "10:00",
+        closingTime: "22:00",
+        closedDays: null,
+        createdAt: 0,
+      })
+      .run();
+
+    const result = createCorrection({
+      employee_id: staffId,
+      store_id: 2,
+      target_date: "2026-04-01",
+      requested_value: new Date(2026, 3, 1, 10, 0, 0).getTime(),
+      requested_type: "clock_in",
+      reason: "別店舗に誤って申請",
+    });
+
+    expect(result.kind).toBe("forbidden");
+    if (result.kind !== "forbidden") return;
+    expect(result.reason).toBe("employee_not_assigned_to_store");
+  });
+
+  it("rejects target punch corrections when an explicit store_id does not match the punch store", () => {
+    const { storeId, staffId } = seed();
+    db.insert(schema.stores)
+      .values({
+        id: 2,
+        code: "hanare",
+        name: "雀庵 離れ",
+        displayName: "雀庵 離れ",
+        openingTime: "10:00",
+        closingTime: "22:00",
+        closedDays: null,
+        createdAt: 0,
+      })
+      .run();
+    db.insert(schema.employeeStores)
+      .values({ employeeId: staffId, storeId: 2, isPrimary: 0 })
+      .run();
+    const punch = createPunch({
+      employee_id: staffId,
+      store_id: storeId,
+      punch_type: "clock_in",
+      now: new Date(2026, 3, 1, 9, 0, 0).getTime(),
+    });
+    if (punch.kind !== "ok") throw new Error("setup failed");
+
+    const result = createCorrection({
+      employee_id: staffId,
+      store_id: 2,
+      target_punch_id: punch.punch.id,
+      target_date: "2026-04-01",
+      requested_value: new Date(2026, 3, 1, 10, 0, 0).getTime(),
+      reason: "店舗不一致",
+    });
+
+    expect(result.kind).toBe("invalid_store");
+    if (result.kind !== "invalid_store") return;
+    expect(result.reason).toBe("punch_store_mismatch");
   });
 });
 
@@ -184,10 +246,11 @@ describe("corrections service - approveCorrection", () => {
   });
 
   it("inserts a new punch when target_punch_id is null (打刻漏れ)", () => {
-    const { staffId, managerId } = seed();
+    const { storeId, staffId, managerId } = seed();
     const requested = new Date(2026, 3, 2, 10, 0, 0).getTime();
     const created = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-02",
       requested_value: requested,
       requested_type: "clock_in",
@@ -206,6 +269,7 @@ describe("corrections service - approveCorrection", () => {
     expect(punches[0].punchedAt).toBe(requested);
     expect(punches[0].source).toBe("correction");
     expect(punches[0].punchType).toBe("clock_in");
+    expect(punches[0].storeId).toBe(storeId);
 
     const logs = db.select().from(schema.auditLogs).all();
     expect(logs.length).toBe(1);
@@ -215,9 +279,10 @@ describe("corrections service - approveCorrection", () => {
   });
 
   it("rejects double approval (invalid_state)", () => {
-    const { staffId, managerId } = seed();
+    const { storeId, staffId, managerId } = seed();
     const created = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-02",
       requested_value: Date.now(),
       requested_type: "clock_in",
@@ -239,9 +304,10 @@ describe("corrections service - approveCorrection", () => {
 
 describe("corrections service - rejectCorrection", () => {
   it("transitions to rejected and stores the comment", () => {
-    const { staffId, managerId } = seed();
+    const { storeId, staffId, managerId } = seed();
     const created = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-02",
       requested_value: Date.now(),
       requested_type: "clock_in",
@@ -271,9 +337,10 @@ describe("corrections service - rejectCorrection", () => {
   });
 
   it("cannot reject a non-pending correction", () => {
-    const { staffId, managerId } = seed();
+    const { storeId, staffId, managerId } = seed();
     const created = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-02",
       requested_value: Date.now(),
       requested_type: "clock_in",
@@ -296,9 +363,10 @@ describe("corrections service - rejectCorrection", () => {
 
 describe("corrections service - listCorrections", () => {
   it("filters by status", () => {
-    const { staffId, managerId } = seed();
+    const { storeId, staffId, managerId } = seed();
     const a = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-01",
       requested_value: Date.now(),
       requested_type: "clock_in",
@@ -306,6 +374,7 @@ describe("corrections service - listCorrections", () => {
     });
     const b = createCorrection({
       employee_id: staffId,
+      store_id: storeId,
       target_date: "2026-04-02",
       requested_value: Date.now(),
       requested_type: "clock_in",

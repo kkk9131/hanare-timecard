@@ -1,9 +1,10 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { applyAllMigrations } from "../helpers/migrations.js";
 
 const TMP_DIR = mkdtempSync(join(tmpdir(), "hanare-permission-scope-"));
 process.env.HANARE_DB_PATH = join(TMP_DIR, "permission-scope.db");
@@ -14,16 +15,7 @@ const { createApp } = await import("../../src/server/app.js");
 const app = createApp();
 
 function applyMigrations(): void {
-  const sqlPath = resolve("drizzle/0000_init.sql");
-  const sql = readFileSync(sqlPath, "utf8");
-  const statements = sql
-    .split(/-->\s*statement-breakpoint/g)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of statements) {
-    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-    (db as any).$client.exec(stmt);
-  }
+  applyAllMigrations(db);
 }
 
 function clear(): void {
@@ -155,6 +147,7 @@ function seed() {
     .insert(schema.correctionRequests)
     .values({
       employeeId: 21,
+      storeId: 2,
       targetPunchId: null,
       targetDate: "2026-04-05",
       requestedValue: new Date(2026, 3, 5, 18, 0).getTime(),
@@ -173,6 +166,7 @@ function seed() {
     .insert(schema.correctionRequests)
     .values({
       employeeId: 11,
+      storeId: 2,
       targetPunchId: store2PunchByStore1Staff.id,
       targetDate: "2026-04-05",
       requestedValue: new Date(2026, 3, 5, 18, 30).getTime(),
@@ -381,5 +375,44 @@ describe("task-7001 権限スコープ強化", () => {
       body: JSON.stringify({ review_comment: "却下" }),
     });
     expect(reject.status).toBe(403);
+  });
+
+  it("複数店舗所属スタッフの新規打刻申請は、申請 store_id の店舗だけで扱える", async () => {
+    const s = seed();
+    db.insert(schema.employeeStores)
+      .values({ employeeId: s.staffStore1Id, storeId: 2, isPrimary: 0 })
+      .run();
+
+    const staffSid = makeSession(s.staffStore1Id, "staff");
+    const create = await req("/api/corrections", {
+      method: "POST",
+      sid: staffSid,
+      body: JSON.stringify({
+        store_id: 2,
+        target_punch_id: null,
+        target_date: "2026-04-07",
+        requested_value: new Date(2026, 3, 7, 10, 0).getTime(),
+        requested_type: "clock_in",
+        reason: "離れの出勤打刻漏れ",
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as {
+      correction: { id: number; store_id: number; target_punch_id: number | null };
+    };
+    expect(created.correction.store_id).toBe(2);
+    expect(created.correction.target_punch_id).toBeNull();
+
+    const list = await req("/api/corrections", { sid: s.managerSid });
+    expect(list.status).toBe(200);
+    const listBody = (await list.json()) as { corrections: Array<{ id: number }> };
+    expect(listBody.corrections.some((c) => c.id === created.correction.id)).toBe(false);
+
+    const approve = await req(`/api/corrections/${created.correction.id}/approve`, {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({ review_comment: "承認" }),
+    });
+    expect(approve.status).toBe(403);
   });
 });

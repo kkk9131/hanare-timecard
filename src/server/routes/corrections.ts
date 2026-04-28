@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -7,9 +6,7 @@ import {
   listCorrectionsQuerySchema,
   rejectCorrectionSchema,
 } from "../../shared/schemas.js";
-import { db, schema } from "../db/client.js";
 import {
-  assertCanAccessEmployee,
   assertCanAccessStore,
   requireAuth,
   requireRole,
@@ -41,34 +38,7 @@ function assertCanApproveCorrection(
   correction: CorrectionRow,
 ): void {
   if (user.role === "admin") return;
-
-  if (correction.target_punch_id != null) {
-    const punch = db
-      .select({ storeId: schema.timePunches.storeId })
-      .from(schema.timePunches)
-      .where(eq(schema.timePunches.id, correction.target_punch_id))
-      .get();
-    if (punch) {
-      assertCanAccessStore(user, punch.storeId);
-      return;
-    }
-  }
-
-  const stores = db
-    .select({
-      storeId: schema.employeeStores.storeId,
-      isPrimary: schema.employeeStores.isPrimary,
-    })
-    .from(schema.employeeStores)
-    .where(eq(schema.employeeStores.employeeId, correction.employee_id))
-    .all();
-  const store = stores.find((s) => s.isPrimary === 1) ?? stores[0];
-  if (store) {
-    assertCanAccessStore(user, store.storeId);
-    return;
-  }
-
-  assertCanAccessEmployee(user, correction.employee_id);
+  assertCanAccessStore(user, correction.store_id);
 }
 
 /**
@@ -134,6 +104,7 @@ correctionsRoutes.post("/", requireAuth, async (c) => {
 
   const result = createCorrection({
     employee_id: user.employeeId,
+    store_id: parsed.data.store_id ?? null,
     target_punch_id: parsed.data.target_punch_id ?? null,
     target_date: parsed.data.target_date,
     requested_value: parsed.data.requested_value ?? null,
@@ -142,7 +113,28 @@ correctionsRoutes.post("/", requireAuth, async (c) => {
   });
 
   if (result.kind === "forbidden") {
-    return c.json({ error: "forbidden", message: "他人の打刻に対する申請はできません" }, 403);
+    return c.json(
+      {
+        error: "forbidden",
+        message:
+          result.reason === "not_owner"
+            ? "他人の打刻に対する申請はできません"
+            : "所属していない店舗への申請はできません",
+      },
+      403,
+    );
+  }
+  if (result.kind === "invalid_store") {
+    return c.json(
+      {
+        error: "invalid_store",
+        message:
+          result.reason === "store_required"
+            ? "申請対象の店舗を指定してください"
+            : "指定された店舗と対象打刻の店舗が一致しません",
+      },
+      400,
+    );
   }
   if (result.kind === "not_found") {
     return c.json({ error: "not_found", message: "対象の打刻が見つかりません" }, 404);

@@ -8,6 +8,7 @@ export type CorrectionStatus = z.infer<typeof correctionStatusSchema>;
 export const correctionRowSchema = z.object({
   id: z.number(),
   employee_id: z.number(),
+  store_id: z.number(),
   target_punch_id: z.number().nullable(),
   target_date: z.string(),
   requested_value: z.number().nullable(),
@@ -33,6 +34,7 @@ export function fetchMyCorrections(signal?: AbortSignal): Promise<CorrectionRow[
 }
 
 export const createCorrectionInputSchema = z.object({
+  store_id: z.number().nullable().optional(),
   target_punch_id: z.number().nullable().optional(),
   target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   requested_value: z.number().nullable().optional(),

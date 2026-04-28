@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { listStores, type Store } from "../api/admin";
+import { fetchMe } from "../api/auth";
 import { type CorrectionRow, createCorrection, fetchMyCorrections } from "../api/corrections";
 import type { PunchType } from "../api/punches";
 import { StatePill } from "../components/ui/StatePill";
@@ -37,6 +39,8 @@ export function MeCorrections() {
 
   // form state
   const [date, setDate] = useState<string>(defaultDate());
+  const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeOptions, setStoreOptions] = useState<Array<Pick<Store, "id" | "display_name">>>([]);
   const [punchType, setPunchType] = useState<PunchType>("clock_in");
   const [time, setTime] = useState<string>("09:00");
   const [reason, setReason] = useState<string>("");
@@ -62,12 +66,36 @@ export function MeCorrections() {
     return reload();
   }, [reload]);
 
+  useEffect(() => {
+    const ac = new AbortController();
+    Promise.all([fetchMe(ac.signal), listStores(ac.signal)])
+      .then(([me, stores]) => {
+        const allowedStores = stores
+          .filter((s) => me.store_ids.includes(s.id))
+          .map((s) => ({ id: s.id, display_name: s.display_name }));
+        setStoreOptions(allowedStores);
+        setStoreId((current) => {
+          if (current != null && me.store_ids.includes(current)) return current;
+          return allowedStores[0]?.id ?? me.store_ids[0] ?? null;
+        });
+      })
+      .catch((e) => {
+        if ((e as { name?: string }).name === "AbortError") return;
+        setStoreOptions([]);
+      });
+    return () => ac.abort();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
     if (!reason.trim()) {
       setFormError("理由を入力してください");
+      return;
+    }
+    if (storeId == null) {
+      setFormError("店舗を選択してください");
       return;
     }
     setSubmitting(true);
@@ -78,6 +106,7 @@ export function MeCorrections() {
       target.setHours(hh ?? 0, mm ?? 0, 0, 0);
 
       await createCorrection({
+        store_id: storeId,
         target_punch_id: null,
         target_date: date,
         requested_value: target.getTime(),
@@ -118,6 +147,24 @@ export function MeCorrections() {
               onChange={(e) => setDate(e.target.value)}
               required
             />
+          </div>
+          <div className="me-form__field">
+            <label className="me-form__label" htmlFor="me-corr-store">
+              対象店舗
+            </label>
+            <select
+              id="me-corr-store"
+              className="me-form__select"
+              value={storeId ?? ""}
+              onChange={(e) => setStoreId(Number.parseInt(e.target.value, 10))}
+              required
+            >
+              {storeOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.display_name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="me-form__field">
             <label className="me-form__label" htmlFor="me-corr-type">
