@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { aggregatePunches, type PunchType } from "../lib/time.js";
 
@@ -163,6 +163,7 @@ function buildMessage(employeeId: number, t: PunchType, ts: number): string {
 export interface ListPunchesQuery {
   employee_id?: number;
   store_id?: number;
+  store_ids?: number[];
   /** unix ms inclusive */
   from?: number;
   /** unix ms exclusive */
@@ -173,6 +174,10 @@ export function listPunches(q: ListPunchesQuery): PunchRow[] {
   const conds = [] as Array<ReturnType<typeof eq>>;
   if (q.employee_id != null) conds.push(eq(schema.timePunches.employeeId, q.employee_id));
   if (q.store_id != null) conds.push(eq(schema.timePunches.storeId, q.store_id));
+  if (q.store_ids != null) {
+    if (q.store_ids.length === 0) return [];
+    conds.push(inArray(schema.timePunches.storeId, q.store_ids) as ReturnType<typeof eq>);
+  }
   if (q.from != null) conds.push(gte(schema.timePunches.punchedAt, q.from));
   if (q.to != null) conds.push(lte(schema.timePunches.punchedAt, q.to));
 

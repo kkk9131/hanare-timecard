@@ -6,7 +6,7 @@
  *  GET /api/exports/csv
  *  GET /api/exports/xlsx
  *
- * manager+ 限定。
+ * admin 限定。
  */
 
 import type { Context } from "hono";
@@ -81,8 +81,8 @@ async function handleXlsx(c: Ctx) {
   return c.body(new Uint8Array(buf));
 }
 
-exportsRoutes.get("/period.csv", requireRole("manager", "admin"), handleCsv);
-exportsRoutes.get("/period.xlsx", requireRole("manager", "admin"), handleXlsx);
+exportsRoutes.get("/period.csv", requireRole("admin"), handleCsv);
+exportsRoutes.get("/period.xlsx", requireRole("admin"), handleXlsx);
 // api-spec.md 互換エイリアス
-exportsRoutes.get("/csv", requireRole("manager", "admin"), handleCsv);
-exportsRoutes.get("/xlsx", requireRole("manager", "admin"), handleXlsx);
+exportsRoutes.get("/csv", requireRole("admin"), handleCsv);
+exportsRoutes.get("/xlsx", requireRole("admin"), handleXlsx);

@@ -9,7 +9,13 @@ import {
   shiftConflictsQuerySchema,
   updateShiftSchema,
 } from "../../shared/schemas.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import {
+  assertCanAccessEmployee,
+  assertCanAccessStore,
+  requireAuth,
+  requireRole,
+  scopeStoreQuery,
+} from "../middleware/auth.js";
 import type { HonoVariables } from "../middleware/session.js";
 import {
   createShift,
@@ -72,6 +78,8 @@ shiftsRoutes.get("/", requireAuth, (c) => {
   if (user.role === "staff") {
     q.status = "published";
     q.employee_id = user.employeeId;
+  } else {
+    Object.assign(q, scopeStoreQuery(user, parsed.data.store_id));
   }
 
   const shifts = listShifts(q);
@@ -82,6 +90,8 @@ shiftsRoutes.get("/", requireAuth, (c) => {
  * GET /api/shifts/conflicts
  */
 shiftsRoutes.get("/conflicts", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
   const parsed = shiftConflictsQuerySchema.safeParse({
     store_id: c.req.query("store_id"),
     from: c.req.query("from"),
@@ -97,6 +107,7 @@ shiftsRoutes.get("/conflicts", requireRole("manager", "admin"), (c) => {
       400,
     );
   }
+  assertCanAccessStore(user, parsed.data.store_id);
   const report = detectConflicts(parsed.data.store_id, parsed.data.from, parsed.data.to);
   return c.json(report);
 });
@@ -120,6 +131,9 @@ shiftsRoutes.post("/", requireRole("manager", "admin"), async (c) => {
       400,
     );
   }
+
+  assertCanAccessStore(user, parsed.data.store_id);
+  assertCanAccessEmployee(user, parsed.data.employee_id);
 
   const result = createShift({
     employee_id: parsed.data.employee_id,
@@ -168,6 +182,7 @@ shiftsRoutes.post("/publish", requireRole("manager", "admin"), async (c) => {
       400,
     );
   }
+  assertCanAccessStore(user, parsed.data.store_id);
   const result = publishShifts(
     parsed.data.store_id,
     parsed.data.from,
@@ -198,6 +213,13 @@ shiftsRoutes.patch("/:id", requireRole("manager", "admin"), async (c) => {
     );
   }
 
+  const existing = getShift(id);
+  if (!existing) {
+    return c.json({ error: "not_found", message: "シフトが見つかりません" }, 404);
+  }
+  assertCanAccessStore(user, existing.store_id);
+  if (parsed.data.store_id != null) assertCanAccessStore(user, parsed.data.store_id);
+  if (parsed.data.employee_id != null) assertCanAccessEmployee(user, parsed.data.employee_id);
   const result = updateShift(id, parsed.data, user.employeeId);
   if (result.kind === "not_found") {
     return c.json({ error: "not_found", message: "シフトが見つかりません" }, 404);
@@ -229,6 +251,7 @@ shiftsRoutes.delete("/:id", requireRole("manager", "admin"), (c) => {
   if (!existing) {
     return c.json({ error: "not_found", message: "シフトが見つかりません" }, 404);
   }
+  assertCanAccessStore(user, existing.store_id);
   const result = deleteShift(id, user.employeeId);
   if (result.kind === "not_found") {
     return c.json({ error: "not_found", message: "シフトが見つかりません" }, 404);
@@ -245,6 +268,8 @@ shiftsRoutes.delete("/:id", requireRole("manager", "admin"), (c) => {
  * GET /api/shift-requests (manager+)
  */
 shiftRequestsRoutes.get("/", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
   const parsed = listShiftRequestsQuerySchema.safeParse({
     from: c.req.query("from"),
     to: c.req.query("to"),
@@ -259,7 +284,11 @@ shiftRequestsRoutes.get("/", requireRole("manager", "admin"), (c) => {
       400,
     );
   }
-  const requests = listShiftRequests(parsed.data);
+  const storeScope = scopeStoreQuery(user);
+  const requests = listShiftRequests({
+    ...parsed.data,
+    store_ids: storeScope.store_id != null ? [storeScope.store_id] : storeScope.store_ids,
+  });
   return c.json({ requests });
 });
 
@@ -335,6 +364,9 @@ shiftRequestsRoutes.delete("/:id", requireAuth, (c) => {
   const isManager = user.role === "manager" || user.role === "admin";
   if (!isOwner && !isManager) {
     return c.json({ error: "forbidden", message: "権限がありません" }, 403);
+  }
+  if (!isOwner && isManager) {
+    assertCanAccessEmployee(user, existing.employee_id);
   }
   deleteShiftRequest(id);
   return c.json({ ok: true });

@@ -5,7 +5,12 @@ import {
   listPunchesQuerySchema,
   myPunchesQuerySchema,
 } from "../../shared/schemas.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import {
+  assertCanAccessEmployee,
+  requireAuth,
+  requireRole,
+  scopeStoreQuery,
+} from "../middleware/auth.js";
 import type { HonoVariables } from "../middleware/session.js";
 import {
   createPunch,
@@ -120,6 +125,8 @@ punchesRoutes.get("/me/state", requireAuth, (c) => {
  * manager+ 全打刻
  */
 punchesRoutes.get("/", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
   const parsed = listPunchesQuerySchema.safeParse({
     store_id: c.req.query("store_id"),
     employee_id: c.req.query("employee_id"),
@@ -139,10 +146,14 @@ punchesRoutes.get("/", requireRole("manager", "admin"), (c) => {
 
   const fromMs = parsed.data.from ? dateToMs(parsed.data.from) : undefined;
   const toMs = parsed.data.to ? dateToMs(parsed.data.to) + 24 * 60 * 60 * 1000 : undefined;
+  if (parsed.data.employee_id != null) {
+    assertCanAccessEmployee(user, parsed.data.employee_id);
+  }
+  const storeScope = scopeStoreQuery(user, parsed.data.store_id);
 
   const punches = listPunches({
     employee_id: parsed.data.employee_id,
-    store_id: parsed.data.store_id,
+    ...storeScope,
     from: fromMs,
     to: toMs,
   });

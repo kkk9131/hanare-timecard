@@ -94,6 +94,7 @@ export function createCorrection(input: CreateCorrectionInput): CreateCorrection
 export interface ListCorrectionsQuery {
   status?: CorrectionStatus;
   store_id?: number;
+  store_ids?: number[];
   employee_id?: number;
   /** unix ms inclusive */
   from?: number;
@@ -112,11 +113,14 @@ export function listCorrections(q: ListCorrectionsQuery): CorrectionRow[] {
   if (q.from != null) conds.push(gte(schema.correctionRequests.createdAt, q.from));
   if (q.to != null) conds.push(lte(schema.correctionRequests.createdAt, q.to));
 
-  if (q.store_id != null) {
+  const scopedStoreIds =
+    q.store_ids != null ? q.store_ids : q.store_id != null ? [q.store_id] : undefined;
+  if (scopedStoreIds != null) {
+    if (scopedStoreIds.length === 0) return [];
     const empIds = db
       .select({ id: schema.employeeStores.employeeId })
       .from(schema.employeeStores)
-      .where(eq(schema.employeeStores.storeId, q.store_id))
+      .where(inArray(schema.employeeStores.storeId, scopedStoreIds))
       .all()
       .map((r) => r.id);
     if (empIds.length === 0) return [];

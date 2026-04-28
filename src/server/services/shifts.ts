@@ -48,6 +48,7 @@ export interface UpdateShiftInput {
 
 export interface ListShiftsQuery {
   store_id?: number;
+  store_ids?: number[];
   employee_id?: number;
   from?: string;
   to?: string;
@@ -300,6 +301,10 @@ export function getShift(shiftId: number): ShiftRow | null {
 export function listShifts(query: ListShiftsQuery): ShiftRow[] {
   const conditions = [];
   if (query.store_id != null) conditions.push(eq(schema.shifts.storeId, query.store_id));
+  if (query.store_ids != null) {
+    if (query.store_ids.length === 0) return [];
+    conditions.push(inArray(schema.shifts.storeId, query.store_ids));
+  }
   if (query.employee_id != null) conditions.push(eq(schema.shifts.employeeId, query.employee_id));
   if (query.from != null) conditions.push(gte(schema.shifts.date, query.from));
   if (query.to != null) conditions.push(lte(schema.shifts.date, query.to));
@@ -450,11 +455,28 @@ export function listShiftRequests(query: {
   from?: string;
   to?: string;
   employee_id?: number;
+  employee_ids?: number[];
+  store_ids?: number[];
 }): ShiftRequestRow[] {
   const conds = [];
   if (query.from != null) conds.push(gte(schema.shiftRequests.date, query.from));
   if (query.to != null) conds.push(lte(schema.shiftRequests.date, query.to));
   if (query.employee_id != null) conds.push(eq(schema.shiftRequests.employeeId, query.employee_id));
+  if (query.employee_ids != null) {
+    if (query.employee_ids.length === 0) return [];
+    conds.push(inArray(schema.shiftRequests.employeeId, query.employee_ids));
+  }
+  if (query.store_ids != null) {
+    if (query.store_ids.length === 0) return [];
+    const empIds = db
+      .select({ id: schema.employeeStores.employeeId })
+      .from(schema.employeeStores)
+      .where(inArray(schema.employeeStores.storeId, query.store_ids))
+      .all()
+      .map((r) => r.id);
+    if (empIds.length === 0) return [];
+    conds.push(inArray(schema.shiftRequests.employeeId, empIds));
+  }
   const where = conds.length > 0 ? and(...conds) : undefined;
   const rows = where
     ? db

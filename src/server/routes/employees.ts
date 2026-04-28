@@ -6,7 +6,7 @@ import {
   retireEmployeeSchema,
   updateEmployeeSchema,
 } from "../../shared/schemas.js";
-import { requireRole } from "../middleware/auth.js";
+import { assertCanAccessEmployee, requireRole, scopeStoreQuery } from "../middleware/auth.js";
 import type { HonoVariables } from "../middleware/session.js";
 import {
   createEmployee,
@@ -28,6 +28,8 @@ function handleServiceError(e: unknown) {
 
 /** GET /api/employees?store_id&include_retired&search  (manager+) */
 employeesRoutes.get("/", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
   const parsed = listEmployeesQuerySchema.safeParse({
     store_id: c.req.query("store_id"),
     include_retired: c.req.query("include_retired"),
@@ -43,8 +45,9 @@ employeesRoutes.get("/", requireRole("manager", "admin"), (c) => {
     );
   }
   const search = c.req.query("search");
+  const storeScope = scopeStoreQuery(user, parsed.data.store_id);
   const employees = listEmployees({
-    store_id: parsed.data.store_id,
+    ...storeScope,
     include_retired: parsed.data.include_retired,
     search,
   });
@@ -59,6 +62,9 @@ employeesRoutes.get("/:id", requireRole("manager", "admin"), (c) => {
   }
   const emp = getEmployee(id);
   if (!emp) return c.json({ error: "not_found", message: "従業員が見つかりません" }, 404);
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  assertCanAccessEmployee(user, id);
   return c.json({ employee: emp });
 });
 

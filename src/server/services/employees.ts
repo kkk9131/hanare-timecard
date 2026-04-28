@@ -1,5 +1,5 @@
-import bcrypt from "bcrypt";
 import { randomUUID } from "node:crypto";
+import bcrypt from "bcrypt";
 import { and, asc, eq, isNull, like, or } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { writeAuditLog } from "./audit.js";
@@ -65,6 +65,7 @@ function loadLinks(employeeId: number) {
 
 export interface ListEmployeesQuery {
   store_id?: number;
+  store_ids?: number[];
   include_retired?: boolean;
   search?: string;
 }
@@ -97,6 +98,12 @@ export function listEmployees(query: ListEmployeesQuery = {}): EmployeeDTO[] {
 
   // Pre-load all links in one pass.
   const allLinks = db.select().from(schema.employeeStores).all();
+  const scopedStoreIds =
+    query.store_ids != null
+      ? new Set(query.store_ids)
+      : query.store_id != null
+        ? new Set([query.store_id])
+        : null;
   const byEmp = new Map<number, { storeId: number; isPrimary: number }[]>();
   for (const link of allLinks) {
     const arr = byEmp.get(link.employeeId) ?? [];
@@ -107,7 +114,7 @@ export function listEmployees(query: ListEmployeesQuery = {}): EmployeeDTO[] {
   const out: EmployeeDTO[] = [];
   for (const r of rows) {
     const links = byEmp.get(r.id) ?? [];
-    if (query.store_id != null && !links.some((l) => l.storeId === query.store_id)) {
+    if (scopedStoreIds != null && !links.some((l) => scopedStoreIds.has(l.storeId))) {
       continue;
     }
     out.push(rowToDTO(r, links));

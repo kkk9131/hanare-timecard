@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -6,11 +7,20 @@ import {
   listCorrectionsQuerySchema,
   rejectCorrectionSchema,
 } from "../../shared/schemas.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { db, schema } from "../db/client.js";
+import {
+  assertCanAccessEmployee,
+  assertCanAccessStore,
+  requireAuth,
+  requireRole,
+  scopeStoreQuery,
+} from "../middleware/auth.js";
 import type { HonoVariables } from "../middleware/session.js";
 import {
   approveCorrection,
+  type CorrectionRow,
   createCorrection,
+  getCorrection,
   listCorrections,
   rejectCorrection,
 } from "../services/corrections.js";
@@ -24,6 +34,41 @@ function parseIdParam(raw: string | undefined): number {
     throw new HTTPException(400, { message: "id must be a positive integer" });
   }
   return n;
+}
+
+function assertCanApproveCorrection(
+  user: NonNullable<HonoVariables["user"]>,
+  correction: CorrectionRow,
+): void {
+  if (user.role === "admin") return;
+
+  if (correction.target_punch_id != null) {
+    const punch = db
+      .select({ storeId: schema.timePunches.storeId })
+      .from(schema.timePunches)
+      .where(eq(schema.timePunches.id, correction.target_punch_id))
+      .get();
+    if (punch) {
+      assertCanAccessStore(user, punch.storeId);
+      return;
+    }
+  }
+
+  const stores = db
+    .select({
+      storeId: schema.employeeStores.storeId,
+      isPrimary: schema.employeeStores.isPrimary,
+    })
+    .from(schema.employeeStores)
+    .where(eq(schema.employeeStores.employeeId, correction.employee_id))
+    .all();
+  const store = stores.find((s) => s.isPrimary === 1) ?? stores[0];
+  if (store) {
+    assertCanAccessStore(user, store.storeId);
+    return;
+  }
+
+  assertCanAccessEmployee(user, correction.employee_id);
 }
 
 /**
@@ -42,6 +87,8 @@ correctionsRoutes.get("/me", requireAuth, (c) => {
  * manager+ 一覧
  */
 correctionsRoutes.get("/", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
   const parsed = listCorrectionsQuerySchema.safeParse({
     status: c.req.query("status"),
     store_id: c.req.query("store_id"),
@@ -56,9 +103,10 @@ correctionsRoutes.get("/", requireRole("manager", "admin"), (c) => {
       400,
     );
   }
+  const storeScope = scopeStoreQuery(user, parsed.data.store_id);
   const corrections = listCorrections({
     status: parsed.data.status,
-    store_id: parsed.data.store_id,
+    ...storeScope,
   });
   return c.json({ corrections });
 });
@@ -94,16 +142,10 @@ correctionsRoutes.post("/", requireAuth, async (c) => {
   });
 
   if (result.kind === "forbidden") {
-    return c.json(
-      { error: "forbidden", message: "他人の打刻に対する申請はできません" },
-      403,
-    );
+    return c.json({ error: "forbidden", message: "他人の打刻に対する申請はできません" }, 403);
   }
   if (result.kind === "not_found") {
-    return c.json(
-      { error: "not_found", message: "対象の打刻が見つかりません" },
-      404,
-    );
+    return c.json({ error: "not_found", message: "対象の打刻が見つかりません" }, 404);
   }
   return c.json({ correction: result.correction }, 201);
 });
@@ -112,109 +154,105 @@ correctionsRoutes.post("/", requireAuth, async (c) => {
  * POST /api/corrections/:id/approve
  * manager+: 承認
  */
-correctionsRoutes.post(
-  "/:id/approve",
-  requireRole("manager", "admin"),
-  async (c) => {
-    const user = c.get("user");
-    if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+correctionsRoutes.post("/:id/approve", requireRole("manager", "admin"), async (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
 
-    const id = parseIdParam(c.req.param("id"));
-    const raw = (await c.req.json().catch(() => ({}))) ?? {};
-    const parsed = approveCorrectionSchema.safeParse(raw);
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: "bad_request",
-          message: "リクエストが不正です",
-          details: parsed.error.flatten(),
-        },
-        400,
-      );
-    }
+  const id = parseIdParam(c.req.param("id"));
+  const existing = getCorrection(id);
+  if (!existing) {
+    return c.json({ error: "not_found", message: "申請が見つかりません" }, 404);
+  }
+  assertCanApproveCorrection(user, existing);
+  const raw = (await c.req.json().catch(() => ({}))) ?? {};
+  const parsed = approveCorrectionSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
 
-    const result = approveCorrection({
-      correction_id: id,
-      reviewer_id: user.employeeId,
-      comment: parsed.data.review_comment,
-    });
+  const result = approveCorrection({
+    correction_id: id,
+    reviewer_id: user.employeeId,
+    comment: parsed.data.review_comment,
+  });
 
-    if (result.kind === "not_found") {
-      return c.json(
-        { error: "not_found", message: "申請が見つかりません" },
-        404,
-      );
-    }
-    if (result.kind === "invalid_state") {
-      return c.json(
-        {
-          error: "invalid_state",
-          message: "保留中の申請のみ承認できます",
-          current_state: result.current,
-        },
-        409,
-      );
-    }
-    if (result.kind === "missing_value") {
-      return c.json(
-        {
-          error: "missing_value",
-          message: "承認に必要な値が不足しています",
-        },
-        422,
-      );
-    }
-    return c.json({ correction: result.correction });
-  },
-);
+  if (result.kind === "not_found") {
+    return c.json({ error: "not_found", message: "申請が見つかりません" }, 404);
+  }
+  if (result.kind === "invalid_state") {
+    return c.json(
+      {
+        error: "invalid_state",
+        message: "保留中の申請のみ承認できます",
+        current_state: result.current,
+      },
+      409,
+    );
+  }
+  if (result.kind === "missing_value") {
+    return c.json(
+      {
+        error: "missing_value",
+        message: "承認に必要な値が不足しています",
+      },
+      422,
+    );
+  }
+  return c.json({ correction: result.correction });
+});
 
 /**
  * POST /api/corrections/:id/reject
  * manager+: 却下（review_comment 必須）
  */
-correctionsRoutes.post(
-  "/:id/reject",
-  requireRole("manager", "admin"),
-  async (c) => {
-    const user = c.get("user");
-    if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+correctionsRoutes.post("/:id/reject", requireRole("manager", "admin"), async (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
 
-    const id = parseIdParam(c.req.param("id"));
-    const raw = await c.req.json().catch(() => null);
-    const parsed = rejectCorrectionSchema.safeParse(raw);
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: "unprocessable_entity",
-          message: "却下理由は必須です",
-          details: parsed.error.flatten(),
-        },
-        422,
-      );
-    }
+  const id = parseIdParam(c.req.param("id"));
+  const existing = getCorrection(id);
+  if (!existing) {
+    return c.json({ error: "not_found", message: "申請が見つかりません" }, 404);
+  }
+  assertCanAccessEmployee(user, existing.employee_id);
+  const raw = await c.req.json().catch(() => null);
+  const parsed = rejectCorrectionSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "unprocessable_entity",
+        message: "却下理由は必須です",
+        details: parsed.error.flatten(),
+      },
+      422,
+    );
+  }
 
-    const result = rejectCorrection({
-      correction_id: id,
-      reviewer_id: user.employeeId,
-      comment: parsed.data.review_comment,
-    });
+  const result = rejectCorrection({
+    correction_id: id,
+    reviewer_id: user.employeeId,
+    comment: parsed.data.review_comment,
+  });
 
-    if (result.kind === "not_found") {
-      return c.json(
-        { error: "not_found", message: "申請が見つかりません" },
-        404,
-      );
-    }
-    if (result.kind === "invalid_state") {
-      return c.json(
-        {
-          error: "invalid_state",
-          message: "保留中の申請のみ却下できます",
-          current_state: result.current,
-        },
-        409,
-      );
-    }
-    return c.json({ correction: result.correction });
-  },
-);
+  if (result.kind === "not_found") {
+    return c.json({ error: "not_found", message: "申請が見つかりません" }, 404);
+  }
+  if (result.kind === "invalid_state") {
+    return c.json(
+      {
+        error: "invalid_state",
+        message: "保留中の申請のみ却下できます",
+        current_state: result.current,
+      },
+      409,
+    );
+  }
+  return c.json({ correction: result.correction });
+});
