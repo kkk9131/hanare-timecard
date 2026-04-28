@@ -8,6 +8,7 @@ import {
   AdminDashboardPage,
   AdminEmployeesPage,
   AdminExportsPage,
+  AdminHelpPage,
   AdminLoginPage,
   AdminShiftsPage,
   AdminStoresPage,
@@ -70,6 +71,8 @@ export function App() {
         }
       >
         <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/admin/help" element={<AdminHelpPage />} />
+        <Route path="/admin/help/:topic" element={<AdminHelpPage />} />
         <Route path="/admin/shifts" element={<AdminShiftsPage />} />
         <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
       </Route>

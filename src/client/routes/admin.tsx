@@ -5,6 +5,7 @@ export { AdminCorrectionsPage } from "./AdminCorrections";
 export { AdminDashboardPage } from "./AdminDashboard";
 export { AdminEmployeesPage } from "./AdminEmployees";
 export { AdminExportsPage } from "./AdminExports";
+export { AdminHelpPage } from "./AdminHelp";
 export { AdminLoginPage } from "./AdminLogin";
 export { AdminShiftsPage } from "./AdminShifts";
 export { AdminStoresPage } from "./AdminStores";
