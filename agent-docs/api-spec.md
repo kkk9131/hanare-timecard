@@ -6,13 +6,22 @@ REST over JSON。すべて `/api` プレフィックス。Cookie セッション
 
 - `Cookie: hanare_sid=<session_id>`
 - 未認証 → 401 `{ "error": "unauthenticated" }`
-- 権限不足 → 403 `{ "error": "forbidden" }`
+- 権限不足 → 403 `{ "error": "forbidden", "message": "権限がありません" }` などの日本語案内付きエラー
+
+フロントエンドでは、未ログイン時だけログイン画面へ遷移する。ログイン済みで権限が足りない管理画面を開いた場合は、ログイン画面ではなく 403「権限がありません」案内を表示する。
 
 ロール:
 
 - `staff`: 自身の打刻・履歴・修正申請・公開シフト閲覧
-- `manager`: staff の権限 + 自店舗のシフト編成・修正申請審査・自店ダッシュボード
-- `admin`: 全機能 + マスタ管理 + エクスポート + 監査ログ
+- `manager`: staff の権限 + 自店舗のダッシュボード・シフト編成・修正申請審査。管理画面の導線は `/admin`, `/admin/shifts`, `/admin/corrections`
+- `admin`: 全店舗・全管理機能。manager の導線に加えて従業員・店舗マスタ、エクスポート、監査ログ、バックアップを操作できる
+
+Role 表記:
+
+- `認証`: `staff` / `manager` / `admin` のいずれか
+- `manager+`: `manager` または `admin`
+- `manager` は原則として所属店舗のデータだけ参照・操作できる。別店舗を指定した場合は 403
+- `admin` は全店舗を参照・操作できる
 
 ## エンドポイント一覧
 
@@ -46,20 +55,21 @@ POST /api/auth/kiosk-login
 
 | Method | Path                      | Role     | 説明                                  |
 | ------ | ------------------------- | -------- | ------------------------------------- |
-| GET    | /api/employees            | manager+ | クエリ: `?store_id=&include_retired=` |
+| GET    | /api/employees            | manager+ | クエリ: `?store_id=&include_retired=&search=`。manager は自店舗のみ |
+| GET    | /api/employees/:id        | manager+ | 1 件取得。manager は自店舗従業員のみ |
 | POST   | /api/employees            | admin    | 新規追加                              |
 | PATCH  | /api/employees/:id        | admin    | 更新                                  |
 | POST   | /api/employees/:id/retire | admin    | 退職処理                              |
 
 ### Time Punches
 
-| Method | Path                    | Role     | 説明                                               |
-| ------ | ----------------------- | -------- | -------------------------------------------------- | --------- | ------------------------ |
-| POST   | /api/punches            | staff    | 打刻 `{punch_type, store_id}` (時刻はサーバが付与) |
-| GET    | /api/punches/me         | staff    | 自分の打刻履歴 `?from=&to=`                        |
-| GET    | /api/punches            | manager+ | 全打刻 `?store_id=&employee_id=&from=&to=`         |
-| GET    | /api/punches/me/summary | staff    | 当月累計 `{worked, overtime, break, night}` (分)   |
-| GET    | /api/punches/me/state   | staff    | 現在の打刻状態 `{state: 'off'                      | 'working' | 'on_break', last_punch}` |
+| Method | Path                    | Role     | 説明                                                                          |
+| ------ | ----------------------- | -------- | ----------------------------------------------------------------------------- |
+| POST   | /api/punches            | 認証     | 打刻 `{punch_type, store_id}` (時刻はサーバが付与)。本人の所属店舗のみ        |
+| GET    | /api/punches/me         | 認証     | 自分の打刻履歴 `?from=&to=`                                                   |
+| GET    | /api/punches            | manager+ | 全打刻 `?store_id=&employee_id=&from=&to=`。manager は自店舗/自店舗従業員のみ |
+| GET    | /api/punches/me/summary | 認証     | 当月累計 `{worked, overtime, break, night}` (分)                              |
+| GET    | /api/punches/me/state   | 認証     | 現在の打刻状態。`state` は `off` / `working` / `on_break` のいずれか          |
 
 `POST /api/punches` レスポンス:
 
@@ -77,40 +87,42 @@ POST /api/auth/kiosk-login
 
 | Method | Path                  | Role                               | 説明                                                                 |
 | ------ | --------------------- | ---------------------------------- | -------------------------------------------------------------------- |
-| GET    | /api/shifts           | staff (公開のみ) / manager+ (全件) | `?store_id=&from=&to=&status=`                                       |
-| POST   | /api/shifts           | manager+                           | `{employee_id, store_id, date, start_time, end_time}` (status=draft) |
-| PATCH  | /api/shifts/:id       | manager+                           | 更新                                                                 |
-| DELETE | /api/shifts/:id       | manager+                           | 削除 (ドラフトのみ)                                                  |
-| POST   | /api/shifts/publish   | manager+                           | `{store_id, from, to}` 範囲を公開                                    |
-| GET    | /api/shifts/conflicts | manager+                           | `?store_id=&from=&to=` 人員不足/重複検出                             |
+| GET    | /api/shifts           | 認証                               | staff は自分の公開分のみ。manager+ は管理対象店舗の全件 `?store_id=&from=&to=&status=` |
+| POST   | /api/shifts           | manager+                           | `{employee_id, store_id, date, start_time, end_time}` (status=draft)。manager は自店舗のみ |
+| PATCH  | /api/shifts/:id       | manager+                           | 更新。manager は自店舗のみ                                           |
+| DELETE | /api/shifts/:id       | manager+                           | 削除 (ドラフトのみ)。manager は自店舗のみ                            |
+| POST   | /api/shifts/publish   | manager+                           | `{store_id, from, to}` 範囲を公開。manager は自店舗のみ              |
+| GET    | /api/shifts/conflicts | manager+                           | `?store_id=&from=&to=` 人員不足/重複検出。manager は自店舗のみ       |
 
 ### Shift Requests
 
 | Method | Path                    | Role         | 説明         |
 | ------ | ----------------------- | ------------ | ------------ |
-| GET    | /api/shift-requests     | manager+     | `?from=&to=` |
-| GET    | /api/shift-requests/me  | staff        | 自分の希望   |
-| POST   | /api/shift-requests     | staff        | 希望追加     |
-| DELETE | /api/shift-requests/:id | staff (本人) | 取り下げ     |
+| GET    | /api/shift-requests     | manager+            | `?from=&to=`。manager は自店舗従業員のみ |
+| GET    | /api/shift-requests/me  | 認証                | 自分の希望 |
+| POST   | /api/shift-requests     | 認証                | 自分の希望追加 |
+| DELETE | /api/shift-requests/:id | 認証 (本人) / manager+ | 本人の取り下げ、または manager+ による管理対象従業員の削除 |
 
 ### Correction Requests
 
 | Method | Path                         | Role     | 説明                       |
 | ------ | ---------------------------- | -------- | -------------------------- |
-| GET    | /api/corrections             | manager+ | `?status=&store_id=`       |
-| GET    | /api/corrections/me          | staff    | 自分の申請                 |
-| POST   | /api/corrections             | staff    | 申請                       |
-| POST   | /api/corrections/:id/approve | manager+ | 承認 → 打刻反映 + 監査ログ |
-| POST   | /api/corrections/:id/reject  | manager+ | `{review_comment}` 必須    |
+| GET    | /api/corrections             | manager+ | `?status=&store_id=`。manager は自店舗のみ |
+| GET    | /api/corrections/me          | 認証     | 自分の申請 |
+| POST   | /api/corrections             | 認証     | 自分の申請 |
+| POST   | /api/corrections/:id/approve | manager+ | 承認 → 打刻反映 + 監査ログ。manager は自店舗のみ |
+| POST   | /api/corrections/:id/reject  | manager+ | `{review_comment}` 必須。manager は自店舗のみ |
 
 ### Exports
 
-| Method | Path              | Role  | 説明                                     |
-| ------ | ----------------- | ----- | ---------------------------------------- |
-| GET    | /api/exports/xlsx | admin | `?from=&to=&store_id=` xlsx ダウンロード |
-| GET    | /api/exports/csv  | admin | 同上 CSV (UTF-8 BOM + CRLF)              |
+| Method | Path                         | Role  | 説明                                     |
+| ------ | ---------------------------- | ----- | ---------------------------------------- |
+| GET    | /api/exports/period.xlsx     | admin | `?from=&to=&store_id=` xlsx ダウンロード |
+| GET    | /api/exports/period.csv      | admin | 同上 CSV (UTF-8 BOM + CRLF)              |
+| GET    | /api/exports/xlsx            | admin | 互換エイリアス。新規実装は `period.xlsx` 推奨 |
+| GET    | /api/exports/csv             | admin | 互換エイリアス。新規実装は `period.csv` 推奨 |
 
-レスポンスヘッダ: `Content-Disposition: attachment; filename="hanare-2026-04.xlsx"`
+レスポンスヘッダ例: `Content-Disposition: attachment; filename="hanare-all-2026-04.xlsx"; filename*=UTF-8''hanare-all-2026-04.xlsx`
 
 ### Audit Logs
 
