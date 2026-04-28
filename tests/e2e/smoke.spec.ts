@@ -31,7 +31,7 @@ test.describe("task-6003 smoke", () => {
 
     // ---- Step 1: K01 open ----
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /お疲れさまです/ })).toBeVisible();
     const staffTile = page.getByRole("button", {
       name: new RegExp(`${STAFF_NAME}`),
     });
@@ -57,7 +57,7 @@ test.describe("task-6003 smoke", () => {
     await expect(page).toHaveURL(/\/$|\/$/, { timeout: 15_000 });
     // confirm we landed back at the kiosk top
     await page.waitForURL("**/", { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /お疲れさまです/ })).toBeVisible();
 
     // ---- Step 6: K01 → same staff → K03 ----
     await page
@@ -77,7 +77,7 @@ test.describe("task-6003 smoke", () => {
 
     // wait for auto-logout to land back on K01 before switching contexts
     await page.waitForURL("**/", { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /ようこそ、雀庵へ/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /お疲れさまです/ })).toBeVisible();
 
     // ---- Step 8: トップ画面から /admin/login ----
     const browser = context.browser();

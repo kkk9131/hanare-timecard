@@ -45,10 +45,7 @@ interface Seed {
   staffSid: string;
 }
 
-function makeSession(
-  employeeId: number,
-  role: "staff" | "manager" | "admin",
-): string {
+function makeSession(employeeId: number, role: "staff" | "manager" | "admin"): string {
   const id = `sid-${role}-${employeeId}-${Math.random().toString(36).slice(2)}`;
   const now = Date.now();
   db.insert(schema.sessions)
@@ -94,12 +91,8 @@ function seed(): Seed {
       .run();
   insertEmp(10, "admin");
   insertEmp(11, "staff");
-  db.insert(schema.employeeStores)
-    .values({ employeeId: 10, storeId: 1, isPrimary: 1 })
-    .run();
-  db.insert(schema.employeeStores)
-    .values({ employeeId: 11, storeId: 1, isPrimary: 1 })
-    .run();
+  db.insert(schema.employeeStores).values({ employeeId: 10, storeId: 1, isPrimary: 1 }).run();
+  db.insert(schema.employeeStores).values({ employeeId: 11, storeId: 1, isPrimary: 1 }).run();
   return {
     storeId: 1,
     adminId: 10,
@@ -109,17 +102,11 @@ function seed(): Seed {
   };
 }
 
-function req(
-  path: string,
-  init: RequestInit & { sid?: string } = {},
-): Promise<Response> {
+function req(path: string, init: RequestInit & { sid?: string } = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.sid) headers.set("cookie", `hanare_sid=${init.sid}`);
-  if (init.body && !headers.has("content-type"))
-    headers.set("content-type", "application/json");
-  return Promise.resolve(
-    app.fetch(new Request(`http://localhost${path}`, { ...init, headers })),
-  );
+  if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json");
+  return Promise.resolve(app.fetch(new Request(`http://localhost${path}`, { ...init, headers })));
 }
 
 beforeAll(() => {

@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import bcrypt from "bcrypt";
 import { createSqlite, resolveDbPath } from "../src/server/db/client.js";
 
@@ -356,10 +357,10 @@ function insertShifts(db: Sqlite, employees: InsertedEmployee[]): number {
   return count;
 }
 
-function main(): void {
-  const dbPath = resolveDbPath();
-  console.log(`[seed] db = ${dbPath}`);
-  const db = createSqlite(dbPath);
+export function seedDatabase(dbPath?: string): void {
+  const resolvedPath = dbPath ?? resolveDbPath();
+  console.log(`[seed] db = ${resolvedPath}`);
+  const db = createSqlite(resolvedPath);
   try {
     console.log("[seed] clearing existing data...");
     clearAll(db);
@@ -383,4 +384,11 @@ function main(): void {
   }
 }
 
-main();
+function isDirectRun(): boolean {
+  const entry = process.argv[1];
+  return entry ? import.meta.url === pathToFileURL(entry).href : false;
+}
+
+if (isDirectRun()) {
+  seedDatabase();
+}

@@ -9,12 +9,9 @@ const TMP_DB_PATH = join(TMP_DIR, "corrections-test.db");
 process.env.HANARE_DB_PATH = TMP_DB_PATH;
 
 const { db, schema } = await import("../../src/server/db/client.js");
-const {
-  approveCorrection,
-  createCorrection,
-  listCorrections,
-  rejectCorrection,
-} = await import("../../src/server/services/corrections.js");
+const { approveCorrection, createCorrection, listCorrections, rejectCorrection } = await import(
+  "../../src/server/services/corrections.js"
+);
 const { createPunch } = await import("../../src/server/services/punches.js");
 
 function applyMigrations(): void {
@@ -82,12 +79,8 @@ function seed(): { storeId: number; staffId: number; managerId: number } {
   insertEmp(10, "Manager", "manager");
   insertEmp(11, "Alice", "staff");
 
-  db.insert(schema.employeeStores)
-    .values({ employeeId: 11, storeId: 1, isPrimary: 1 })
-    .run();
-  db.insert(schema.employeeStores)
-    .values({ employeeId: 10, storeId: 1, isPrimary: 1 })
-    .run();
+  db.insert(schema.employeeStores).values({ employeeId: 11, storeId: 1, isPrimary: 1 }).run();
+  db.insert(schema.employeeStores).values({ employeeId: 10, storeId: 1, isPrimary: 1 }).run();
 
   return { storeId: 1, staffId: 11, managerId: 10 };
 }

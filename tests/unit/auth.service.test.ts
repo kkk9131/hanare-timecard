@@ -23,8 +23,17 @@ const {
   verifyAdminLogin,
 } = await import("../../src/server/services/auth.js");
 
+interface TestSqliteClient {
+  exec(sql: string): void;
+  close(): void;
+}
+
+function sqliteClient(): TestSqliteClient {
+  return (db as unknown as { $client: TestSqliteClient }).$client;
+}
+
 function applyMigrations(): void {
-  // Replicate scripts/migrate.ts inline to avoid the top-level side-effect.
+  // Replicate scripts/migrate.ts inline so this test can keep using one DB connection.
   const sqlPath = resolve("drizzle/0000_init.sql");
   const sql = readFileSync(sqlPath, "utf8");
   const statements = sql
@@ -33,15 +42,12 @@ function applyMigrations(): void {
     .filter((s) => s.length > 0);
   // Use the same underlying sqlite handle through drizzle.
   for (const stmt of statements) {
-    // drizzle exposes the underlying better-sqlite3 handle via `$client`.
-    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-    (db as any).$client.exec(stmt);
+    sqliteClient().exec(stmt);
   }
 }
 
 function clearTables(): void {
-  // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
-  const sqlite = (db as any).$client;
+  const sqlite = sqliteClient();
   sqlite.exec("DELETE FROM employee_stores");
   sqlite.exec("DELETE FROM sessions");
   sqlite.exec("DELETE FROM employees");
@@ -80,8 +86,7 @@ function seedStore(id: number, code: string): void {
 function seedEmployee(opts: SeedEmployeeOptions = {}): number {
   const pin = opts.pin ?? "1234";
   const pinHash = bcrypt.hashSync(pin, 4);
-  const passwordHash =
-    opts.password != null ? bcrypt.hashSync(opts.password, 4) : null;
+  const passwordHash = opts.password != null ? bcrypt.hashSync(opts.password, 4) : null;
 
   const inserted = db
     .insert(schema.employees)
@@ -107,9 +112,7 @@ function seedEmployee(opts: SeedEmployeeOptions = {}): number {
 
   const empId = inserted.id;
   for (const storeId of opts.storeIds ?? []) {
-    db.insert(schema.employeeStores)
-      .values({ employeeId: empId, storeId, isPrimary: 0 })
-      .run();
+    db.insert(schema.employeeStores).values({ employeeId: empId, storeId, isPrimary: 0 }).run();
   }
   return empId;
 }
@@ -119,9 +122,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  // biome-ignore lint/suspicious/noExplicitAny: internal handle access for tests
   try {
-    (db as any).$client.close();
+    sqliteClient().close();
   } catch {
     /* noop */
   }

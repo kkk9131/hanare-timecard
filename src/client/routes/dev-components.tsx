@@ -44,16 +44,8 @@ export function DevComponentsPage() {
         <WashiCard title="EmployeeTile" eyebrow="04">
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <EmployeeTile name="山田 太郎" kana="やまだ たろう" state="idle" />
-            <EmployeeTile
-              name="佐藤 花子"
-              kana="さとう はなこ"
-              state="on-shift"
-            />
-            <EmployeeTile
-              name="鈴木 次郎"
-              kana="すずき じろう"
-              state="on-break"
-            />
+            <EmployeeTile name="佐藤 花子" kana="さとう はなこ" state="on-shift" />
+            <EmployeeTile name="鈴木 次郎" kana="すずき じろう" state="on-break" />
           </div>
         </WashiCard>
 

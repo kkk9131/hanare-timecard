@@ -12,7 +12,7 @@
     "backup": "tsx scripts/backup.ts",
     "lint": "biome check .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.12",

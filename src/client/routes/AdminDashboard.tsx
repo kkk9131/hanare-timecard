@@ -88,8 +88,7 @@ function shiftCoverage(
 } {
   const published = shifts.filter((s) => s.status === "published");
   // 当週の日数 (from..to inclusive)
-  const days =
-    Math.round((Date.parse(to) - Date.parse(from)) / (1000 * 60 * 60 * 24)) + 1;
+  const days = Math.round((Date.parse(to) - Date.parse(from)) / (1000 * 60 * 60 * 24)) + 1;
   // 概算: 各日 1 枠以上あれば充足とみなす
   const datesCovered = new Set(published.map((s) => s.date));
   const coverageRate = days > 0 ? datesCovered.size / days : 0;
@@ -132,22 +131,17 @@ export function AdminDashboardPage() {
 
   const correctionsQuery = useQuery<Correction[]>({
     queryKey: ["corrections", "pending", storeIdQuery],
-    queryFn: ({ signal }) =>
-      listCorrections({ status: "pending", store_id: storeIdQuery }, signal),
+    queryFn: ({ signal }) => listCorrections({ status: "pending", store_id: storeIdQuery }, signal),
   });
 
   const shiftsQuery = useQuery<Shift[]>({
     queryKey: ["shifts", "thisweek", storeIdQuery],
     queryFn: ({ signal }) =>
-      listShifts(
-        { from: weekFrom, to: weekTo, store_id: storeIdQuery },
-        signal,
-      ),
+      listShifts({ from: weekFrom, to: weekTo, store_id: storeIdQuery }, signal),
   });
 
   const stateByEmp = useMemo(
-    () =>
-      punchesQuery.data ? computeStateByEmployee(punchesQuery.data) : new Map(),
+    () => (punchesQuery.data ? computeStateByEmployee(punchesQuery.data) : new Map()),
     [punchesQuery.data],
   );
 
@@ -162,13 +156,8 @@ export function AdminDashboardPage() {
     const empById = new Map(employeesQuery.data.map((e) => [e.id, e]));
     // 各従業員の当日最初の clock_in 時刻
     const firstClockInByEmp = new Map<number, number>();
-    for (const p of [...punchesQuery.data].sort(
-      (a, b) => a.punched_at - b.punched_at,
-    )) {
-      if (
-        p.punch_type === "clock_in" &&
-        !firstClockInByEmp.has(p.employee_id)
-      ) {
+    for (const p of [...punchesQuery.data].sort((a, b) => a.punched_at - b.punched_at)) {
+      if (p.punch_type === "clock_in" && !firstClockInByEmp.has(p.employee_id)) {
         firstClockInByEmp.set(p.employee_id, p.punched_at);
       }
     }
@@ -222,15 +211,9 @@ export function AdminDashboardPage() {
           {storesQuery.isLoading ? (
             <span className="wa-dash__loading">店舗情報を読み込み中…</span>
           ) : storesQuery.isError ? (
-            <span className="wa-dash__error">
-              店舗情報の取得に失敗しました。
-            </span>
+            <span className="wa-dash__error">店舗情報の取得に失敗しました。</span>
           ) : (
-            <StoreSwitcher
-              stores={stores}
-              value={storeFilter}
-              onChange={setStoreFilter}
-            />
+            <StoreSwitcher stores={stores} value={storeFilter} onChange={setStoreFilter} />
           )}
         </div>
       </header>
@@ -250,11 +233,7 @@ export function AdminDashboardPage() {
           }
         >
           <Stack gap={3}>
-            <div
-              className="wa-dash__metric"
-              role="img"
-              aria-label={`出勤中 ${workingCount} 名`}
-            >
+            <div className="wa-dash__metric" role="img" aria-label={`出勤中 ${workingCount} 名`}>
               <span className="wa-dash__big tnum">
                 {punchesQuery.isLoading ? "—" : workingCount}
               </span>
@@ -333,22 +312,14 @@ export function AdminDashboardPage() {
           <Stack gap={3}>
             <div className="wa-dash__metric">
               <span className="wa-dash__big tnum">
-                {shiftsQuery.isLoading
-                  ? "—"
-                  : `${Math.round(coverage.coverageRate * 100)}`}
+                {shiftsQuery.isLoading ? "—" : `${Math.round(coverage.coverageRate * 100)}`}
               </span>
               <span className="wa-dash__unit">%</span>
             </div>
             <p className="wa-dash__meta">
-              公開枠{" "}
-              <span className="tnum wa-dash__inlineNum">
-                {coverage.publishedCount}
-              </span>{" "}
-              件 ／ 対象{" "}
-              <span className="tnum wa-dash__inlineNum">
-                {coverage.totalSlots}
-              </span>{" "}
-              日 ({weekFrom} 〜 {weekTo})
+              公開枠 <span className="tnum wa-dash__inlineNum">{coverage.publishedCount}</span> 件
+              ／ 対象 <span className="tnum wa-dash__inlineNum">{coverage.totalSlots}</span> 日 (
+              {weekFrom} 〜 {weekTo})
             </p>
             <Link to="/admin/shifts" className="wa-dash__link">
               シフトを編成する →
@@ -363,9 +334,7 @@ export function AdminDashboardPage() {
             <li>
               <Link to="/admin/exports" className="wa-dash__shortlink">
                 <span className="wa-dash__shortlabel">今すぐエクスポート</span>
-                <span className="wa-dash__shortmeta">
-                  月次勤怠を xlsx / CSV で出力
-                </span>
+                <span className="wa-dash__shortmeta">月次勤怠を xlsx / CSV で出力</span>
               </Link>
             </li>
             <li>

@@ -82,11 +82,34 @@ npm run dev             # server + vite 両方を起動
 npm run test                 # 全テスト
 npm run test -- --watch      # ウォッチモード
 npm run test <pattern>       # ファイル名パターンで絞り込み
+npm run test:e2e             # Playwright smoke。専用の一時 DB を作って実行
 ```
 
 - ユニット: `src/**/*.test.ts`
 - 統合: `tests/**/*.test.ts`
 - テスト用 SQLite は `:memory:` または `tests/tmp/` 配下を使う (本番 DB を汚さない)
+- E2E: Playwright の `webServer` が `HANARE_DB_PATH` を一時 DB に向け、migrate/seed 後にサーバを起動する。`data/hanare.db` は変更しない
+
+## 品質ゲートと依存リスク
+
+本番前の最低確認は次の 5 つ。
+
+```bash
+npm run lint
+npm test
+npm run build
+npm run test:e2e
+npm audit --audit-level=moderate
+```
+
+`npm audit --audit-level=moderate` は 2026-04-28 時点で次の既知 moderate が残る。いずれも強制修正すると `drizzle-kit` の大幅ダウングレード、または `exceljs` の破壊的変更が入るため、現時点では risk acceptance とし、上流の安全な更新が出たら解消する。
+
+| 依存経路 | 内容 | 受容理由 / 運用上の対策 |
+| --- | --- | --- |
+| `drizzle-kit -> @esbuild-kit/core-utils -> esbuild` | 開発サーバ応答を別サイトから読まれる可能性 | 本番は `npm run build` 後の `npm run start` で運用し、`npm run dev` や `drizzle-kit` は本番 LAN に公開しない |
+| `exceljs -> uuid` | `uuid` の buffer 指定時の境界チェック不足 | アプリ側では `uuid` の buffer API を直接使わず、Excel 出力はサーバ内で生成する。未信頼入力を `uuid` buffer に渡さない |
+
+`postcss` の moderate は `npm audit fix` で `8.5.12` に更新済み。
 
 ## 新しい API エンドポイント追加手順
 

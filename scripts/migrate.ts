@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createSqlite, resolveDbPath } from "../src/server/db/client.js";
 
 const DRIZZLE_DIR = resolve("drizzle");
@@ -72,12 +73,17 @@ export function runMigrations(dbPath?: string): void {
       console.log(`[migrate] applied ${file} (${statements.length} stmts)`);
       appliedCount += 1;
     }
-    console.log(
-      `[migrate] done. applied=${appliedCount} total=${files.length}`,
-    );
+    console.log(`[migrate] done. applied=${appliedCount} total=${files.length}`);
   } finally {
     db.close();
   }
 }
 
-runMigrations();
+function isDirectRun(): boolean {
+  const entry = process.argv[1];
+  return entry ? import.meta.url === pathToFileURL(entry).href : false;
+}
+
+if (isDirectRun()) {
+  runMigrations();
+}

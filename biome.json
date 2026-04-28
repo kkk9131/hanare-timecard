@@ -20,6 +20,16 @@
     }
   },
   "files": {
-    "includes": ["**", "!dist", "!node_modules", "!drizzle", "!data"]
+    "includes": [
+      "**",
+      "!dist",
+      "!node_modules",
+      "!drizzle",
+      "!data",
+      "!test-results",
+      "!agent-output",
+      "!.codex",
+      "!.superset"
+    ]
   }
 }
