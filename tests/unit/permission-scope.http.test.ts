@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import bcrypt from "bcrypt";
+import { eq } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const TMP_DIR = mkdtempSync(join(tmpdir(), "hanare-permission-scope-"));
@@ -128,8 +129,27 @@ function seed() {
         note: null,
         createdAt: now,
       },
+      {
+        employeeId: 11,
+        storeId: 2,
+        punchType: "clock_out",
+        punchedAt: new Date(2026, 3, 5, 19, 0).getTime(),
+        source: "admin",
+        note: null,
+        createdAt: now,
+      },
     ])
     .run();
+
+  const store2PunchByStore1Staff = db
+    .select()
+    .from(schema.timePunches)
+    .where(eq(schema.timePunches.employeeId, 11))
+    .all()
+    .find((p) => p.storeId === 2);
+  if (!store2PunchByStore1Staff) {
+    throw new Error("failed to seed store2 punch for store1 staff");
+  }
 
   const correction = db
     .insert(schema.correctionRequests)
@@ -149,12 +169,31 @@ function seed() {
     .returning()
     .get();
 
+  const correctionByPunchStore = db
+    .insert(schema.correctionRequests)
+    .values({
+      employeeId: 11,
+      targetPunchId: store2PunchByStore1Staff.id,
+      targetDate: "2026-04-05",
+      requestedValue: new Date(2026, 3, 5, 18, 30).getTime(),
+      requestedType: "clock_out",
+      reason: "別店舗打刻の修正",
+      status: "pending",
+      reviewerId: null,
+      reviewedAt: null,
+      reviewComment: null,
+      createdAt: now + 1,
+    })
+    .returning()
+    .get();
+
   return {
     adminSid: makeSession(1, "admin"),
     managerSid: makeSession(10, "manager"),
     staffStore1Id: 11,
     staffStore2Id: 21,
     correctionStore2Id: correction.id,
+    correctionPunchStore2Id: correctionByPunchStore.id,
   };
 }
 
@@ -265,6 +304,45 @@ describe("task-7001 権限スコープ強化", () => {
     expect(requestBody.requests.some((r) => r.employee_id === s.staffStore2Id)).toBe(false);
   });
 
+  it("manager は従業員の未所属店舗にシフトを作成・移動できない", async () => {
+    const s = seed();
+    db.insert(schema.employeeStores).values({ employeeId: 10, storeId: 2, isPrimary: 0 }).run();
+
+    const createAssigned = await req("/api/shifts", {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({
+        employee_id: s.staffStore1Id,
+        store_id: 1,
+        date: "2026-05-03",
+        start_time: "10:00",
+        end_time: "14:00",
+      }),
+    });
+    expect(createAssigned.status).toBe(201);
+    const created = (await createAssigned.json()) as { shift: { id: number } };
+
+    const createUnassigned = await req("/api/shifts", {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({
+        employee_id: s.staffStore1Id,
+        store_id: 2,
+        date: "2026-05-04",
+        start_time: "10:00",
+        end_time: "14:00",
+      }),
+    });
+    expect(createUnassigned.status).toBe(400);
+
+    const moveUnassigned = await req(`/api/shifts/${created.shift.id}`, {
+      method: "PATCH",
+      sid: s.managerSid,
+      body: JSON.stringify({ store_id: 2 }),
+    });
+    expect(moveUnassigned.status).toBe(400);
+  });
+
   it("manager は他店舗スタッフの修正申請を承認できず、export は admin 限定", async () => {
     const s = seed();
 
@@ -285,5 +363,23 @@ describe("task-7001 権限スコープ強化", () => {
     });
     expect(adminExport.status).toBe(200);
     expect(adminExport.headers.get("content-type")).toContain("text/csv");
+  });
+
+  it("manager は対象打刻の店舗が他店舗の修正申請を一覧表示・却下できない", async () => {
+    const s = seed();
+
+    const list = await req("/api/corrections", { sid: s.managerSid });
+    expect(list.status).toBe(200);
+    const body = (await list.json()) as {
+      corrections: Array<{ id: number; employee_id: number; target_punch_id: number | null }>;
+    };
+    expect(body.corrections.some((c) => c.id === s.correctionPunchStore2Id)).toBe(false);
+
+    const reject = await req(`/api/corrections/${s.correctionPunchStore2Id}/reject`, {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({ review_comment: "却下" }),
+    });
+    expect(reject.status).toBe(403);
   });
 });

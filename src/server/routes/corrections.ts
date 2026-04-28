@@ -221,7 +221,7 @@ correctionsRoutes.post("/:id/reject", requireRole("manager", "admin"), async (c)
   if (!existing) {
     return c.json({ error: "not_found", message: "申請が見つかりません" }, 404);
   }
-  assertCanAccessEmployee(user, existing.employee_id);
+  assertCanApproveCorrection(user, existing);
   const raw = await c.req.json().catch(() => null);
   const parsed = rejectCorrectionSchema.safeParse(raw);
   if (!parsed.success) {

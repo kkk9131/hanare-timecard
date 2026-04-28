@@ -39,6 +39,7 @@ const app = createApp();
 
 interface Seed {
   storeId: number;
+  otherStoreId: number;
   managerId: number;
   staffId: number;
   managerSid: string;
@@ -56,16 +57,28 @@ function makeSession(employeeId: number, role: "staff" | "manager" | "admin"): s
 
 function seed(): Seed {
   db.insert(schema.stores)
-    .values({
-      id: 1,
-      code: "suzumean",
-      name: "雀庵",
-      displayName: "雀庵",
-      openingTime: "10:00",
-      closingTime: "22:00",
-      closedDays: null,
-      createdAt: 0,
-    })
+    .values([
+      {
+        id: 1,
+        code: "suzumean",
+        name: "雀庵",
+        displayName: "雀庵",
+        openingTime: "10:00",
+        closingTime: "22:00",
+        closedDays: null,
+        createdAt: 0,
+      },
+      {
+        id: 2,
+        code: "hanare",
+        name: "雀庵 離れ",
+        displayName: "雀庵 離れ",
+        openingTime: "10:00",
+        closingTime: "22:00",
+        closedDays: null,
+        createdAt: 0,
+      },
+    ])
     .run();
   const pinHash = bcrypt.hashSync("1234", 4);
   const insertEmp = (id: number, role: "manager" | "staff") =>
@@ -92,9 +105,11 @@ function seed(): Seed {
   insertEmp(10, "manager");
   insertEmp(11, "staff");
   db.insert(schema.employeeStores).values({ employeeId: 10, storeId: 1, isPrimary: 1 }).run();
+  db.insert(schema.employeeStores).values({ employeeId: 10, storeId: 2, isPrimary: 0 }).run();
   db.insert(schema.employeeStores).values({ employeeId: 11, storeId: 1, isPrimary: 1 }).run();
   return {
     storeId: 1,
+    otherStoreId: 2,
     managerId: 10,
     staffId: 11,
     managerSid: makeSession(10, "manager"),
@@ -199,6 +214,44 @@ describe("task-4004 done_when (HTTP)", () => {
       }),
     });
     expect(b.status).toBe(409);
+  });
+
+  it("employee cannot be scheduled into a store they do not belong to", async () => {
+    const s = seed();
+
+    const createOtherStore = await req("/api/shifts", {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({
+        employee_id: s.staffId,
+        store_id: s.otherStoreId,
+        date: "2026-05-10",
+        start_time: "10:00",
+        end_time: "14:00",
+      }),
+    });
+    expect(createOtherStore.status).toBe(400);
+
+    const createOwnStore = await req("/api/shifts", {
+      method: "POST",
+      sid: s.managerSid,
+      body: JSON.stringify({
+        employee_id: s.staffId,
+        store_id: s.storeId,
+        date: "2026-05-11",
+        start_time: "10:00",
+        end_time: "14:00",
+      }),
+    });
+    expect(createOwnStore.status).toBe(201);
+    const body = (await createOwnStore.json()) as { shift: { id: number } };
+
+    const moveToOtherStore = await req(`/api/shifts/${body.shift.id}`, {
+      method: "PATCH",
+      sid: s.managerSid,
+      body: JSON.stringify({ store_id: s.otherStoreId }),
+    });
+    expect(moveToOtherStore.status).toBe(400);
   });
 
   it("publish endpoint flips draft -> published in range and audits", async () => {
