@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 
 export type ShiftStatus = "draft" | "published";
@@ -134,12 +134,29 @@ function recordAudit(
     .run();
 }
 
+function employeeBelongsToStore(employeeId: number, storeId: number): boolean {
+  const row = db
+    .select({ employeeId: schema.employeeStores.employeeId })
+    .from(schema.employeeStores)
+    .where(
+      and(
+        eq(schema.employeeStores.employeeId, employeeId),
+        eq(schema.employeeStores.storeId, storeId),
+      ),
+    )
+    .get();
+  return row != null;
+}
+
 export function createShift(
   input: CreateShiftInput,
   now: number = Date.now(),
 ): { kind: "ok"; shift: ShiftRow } | ShiftServiceError {
   if (input.start_time >= input.end_time) {
     return { kind: "invalid", message: "start_time must be before end_time" };
+  }
+  if (!employeeBelongsToStore(input.employee_id, input.store_id)) {
+    return { kind: "invalid", message: "employee does not belong to store" };
   }
   const conflicts = findConflicts(input.employee_id, input.date, input.start_time, input.end_time);
   if (conflicts.length > 0) {
@@ -190,6 +207,9 @@ export function updateShift(
 
   if (next.start_time >= next.end_time) {
     return { kind: "invalid", message: "start_time must be before end_time" };
+  }
+  if (!employeeBelongsToStore(next.employee_id, next.store_id)) {
+    return { kind: "invalid", message: "employee does not belong to store" };
   }
 
   const conflicts = findConflicts(
@@ -504,7 +524,3 @@ export function deleteShiftRequest(id: number): boolean {
   db.delete(schema.shiftRequests).where(eq(schema.shiftRequests.id, id)).run();
   return true;
 }
-
-// silence unused-import warnings if any
-void inArray;
-void ne;

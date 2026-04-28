@@ -91,6 +91,13 @@ function seedBaseline(): {
   insertEmp(10, "Manager", "manager");
   insertEmp(11, "Alice", "staff");
   insertEmp(12, "Bob", "staff");
+  db.insert(schema.employeeStores)
+    .values([
+      { employeeId: 10, storeId: 1, isPrimary: 1 },
+      { employeeId: 11, storeId: 1, isPrimary: 1 },
+      { employeeId: 12, storeId: 1, isPrimary: 1 },
+    ])
+    .run();
 
   return { storeId: 1, empA: 11, empB: 12, managerId: 10 };
 }

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or, type SQL } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import type { PunchType } from "../lib/time.js";
 import { writeAuditLog } from "./audit.js";
@@ -104,10 +104,12 @@ export interface ListCorrectionsQuery {
 
 /**
  * List correction requests with optional filters.
- * store_id filters by the requester's primary/assigned store via employee_stores.
+ * When a request targets an existing punch, store scope follows the punch's store.
+ * New-punch requests do not have an explicit store, so they keep the legacy
+ * employee assignment scope.
  */
 export function listCorrections(q: ListCorrectionsQuery): CorrectionRow[] {
-  const conds = [] as Array<ReturnType<typeof eq>>;
+  const conds: SQL[] = [];
   if (q.status != null) conds.push(eq(schema.correctionRequests.status, q.status));
   if (q.employee_id != null) conds.push(eq(schema.correctionRequests.employeeId, q.employee_id));
   if (q.from != null) conds.push(gte(schema.correctionRequests.createdAt, q.from));
@@ -123,8 +125,28 @@ export function listCorrections(q: ListCorrectionsQuery): CorrectionRow[] {
       .where(inArray(schema.employeeStores.storeId, scopedStoreIds))
       .all()
       .map((r) => r.id);
-    if (empIds.length === 0) return [];
-    conds.push(inArray(schema.correctionRequests.employeeId, empIds));
+    const punchIds = db
+      .select({ id: schema.timePunches.id })
+      .from(schema.timePunches)
+      .where(inArray(schema.timePunches.storeId, scopedStoreIds))
+      .all()
+      .map((r) => r.id);
+
+    const storeConds: SQL[] = [];
+    if (punchIds.length > 0) {
+      storeConds.push(inArray(schema.correctionRequests.targetPunchId, punchIds));
+    }
+    if (empIds.length > 0) {
+      const newPunchRequestCond = and(
+        isNull(schema.correctionRequests.targetPunchId),
+        inArray(schema.correctionRequests.employeeId, empIds),
+      );
+      if (newPunchRequestCond != null) storeConds.push(newPunchRequestCond);
+    }
+    if (storeConds.length === 0) return [];
+    const storeCond = storeConds.length === 1 ? storeConds[0] : or(...storeConds);
+    if (storeCond == null) return [];
+    conds.push(storeCond);
   }
 
   const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
