@@ -10,9 +10,28 @@ systemRoutes.get("/health", (c) => {
   return c.json({ status: "ok", ok: true, time: Date.now() });
 });
 
-systemRoutes.get("/_debug/whoami", requireAuth, (c) => {
-  return c.json({ user: c.get("user") });
-});
+systemRoutes.get(
+  "/_debug/whoami",
+  async (c, next) => {
+    if (process.env.NODE_ENV === "production") {
+      return c.notFound();
+    }
+    await next();
+  },
+  requireAuth,
+  (c) => {
+    const user = c.get("user");
+    return c.json({
+      user: user
+        ? {
+            employeeId: user.employeeId,
+            role: user.role,
+            expiresAt: user.expiresAt,
+          }
+        : null,
+    });
+  },
+);
 
 // 管理画面からの即時バックアップ実行 (admin のみ)
 systemRoutes.post("/backup", requireRole("admin"), (c) => {

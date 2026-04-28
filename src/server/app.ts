@@ -1,8 +1,8 @@
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { productionCorsMiddleware, securityHeadersMiddleware } from "./middleware/security.js";
 import { type HonoVariables, sessionMiddleware } from "./middleware/session.js";
 import { auditRoutes } from "./routes/audit.js";
 import { authRoutes } from "./routes/auth.js";
@@ -18,14 +18,8 @@ export function createApp(): Hono<{ Variables: HonoVariables }> {
   const app = new Hono<{ Variables: HonoVariables }>();
 
   app.use("*", logger());
-  app.use(
-    "*",
-    cors({
-      // LAN 想定: Vite dev server (5173) と同一オリジン (3000) からのアクセスを許可
-      origin: (origin) => origin ?? "*",
-      credentials: true,
-    }),
-  );
+  app.use("*", securityHeadersMiddleware());
+  app.use("*", productionCorsMiddleware());
   app.use("*", sessionMiddleware);
 
   // API 配下はサブアプリで集約。後続チケットでルートをここに追加する。

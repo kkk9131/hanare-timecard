@@ -306,6 +306,33 @@ PROJECT_DIR=/Users/owner/hanare-timecard
 
 2. **ローカル自己署名証明書**: 店内 iPad のみが対象なので、Caddy の `tls internal` や mkcert で発行した証明書をリバースプロキシに読ませるのが最も単純。
 
+### 本番セキュリティ設定の確認
+
+本番起動時は、debug API は無効化され、CORS は同一オリジンまたは `HANARE_ALLOWED_ORIGINS` に列挙したオリジンだけを許可する。複数指定する場合はカンマ区切りにする:
+
+```bash
+NODE_ENV=production HANARE_TLS=1 HANARE_ALLOWED_ORIGINS="https://timecard.example.local" ./start.sh
+```
+
+起動後、別ターミナルから以下を確認する:
+
+```bash
+# debug API は本番では 404
+curl -i http://localhost:3000/api/system/_debug/whoami
+
+# 主要セキュリティヘッダーを確認
+curl -I http://localhost:3000/api/system/health
+
+# 許可した Origin のみ Access-Control-Allow-Origin が返る
+curl -i -H "Origin: https://timecard.example.local" http://localhost:3000/api/system/health
+curl -i -H "Origin: https://unknown.example.local" http://localhost:3000/api/system/health
+
+# HANARE_TLS=1 のとき、ログイン後の Set-Cookie に Secure が付く
+curl -i -X POST http://localhost:3000/api/auth/admin-login \
+  -H "Content-Type: application/json" \
+  -d '{"login_id":"<LOGIN_ID>","password":"<PASSWORD>"}'
+```
+
 ## トラブルシュート
 
 ### サーバが起動しない
