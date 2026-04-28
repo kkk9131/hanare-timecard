@@ -277,6 +277,7 @@ export function AdminStoresPage() {
                 <span>開店時刻</span>
                 <input
                   type="time"
+                  data-testid="store-opening-time"
                   value={form.opening_time}
                   onChange={(e) => setForm({ ...form, opening_time: e.target.value })}
                 />
@@ -285,6 +286,7 @@ export function AdminStoresPage() {
                 <span>閉店時刻</span>
                 <input
                   type="time"
+                  data-testid="store-closing-time"
                   value={form.closing_time}
                   onChange={(e) => setForm({ ...form, closing_time: e.target.value })}
                 />

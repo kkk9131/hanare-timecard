@@ -6,6 +6,7 @@ import {
   type ShiftPreference,
   type ShiftRequestRow,
 } from "../api/shifts";
+import { Modal } from "../components/ui/Modal";
 import { StatePill } from "../components/ui/StatePill";
 import { SumiButton } from "../components/ui/SumiButton";
 import { WashiCard } from "../components/ui/WashiCard";
@@ -47,6 +48,8 @@ export function MeShiftRequests() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<ShiftRequestRow | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const reload = useCallback(() => {
     const ac = new AbortController();
@@ -94,15 +97,27 @@ export function MeShiftRequests() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("この希望を取り下げますか？")) return;
+  const handleDelete = async () => {
+    if (!withdrawTarget) return;
+    setWithdrawing(true);
     try {
-      await deleteShiftRequest(id);
+      await deleteShiftRequest(withdrawTarget.id);
+      setWithdrawTarget(null);
       reload();
     } catch {
       setError("取り下げに失敗しました");
+    } finally {
+      setWithdrawing(false);
     }
   };
+
+  const withdrawTargetDate = withdrawTarget ? fromYmd(withdrawTarget.date) : null;
+  const withdrawTargetMeta = withdrawTarget ? preferenceMeta(withdrawTarget.preference) : null;
+  const withdrawTargetTime = withdrawTarget
+    ? withdrawTarget.start_time && withdrawTarget.end_time
+      ? `${withdrawTarget.start_time.slice(0, 5)} 〜 ${withdrawTarget.end_time.slice(0, 5)}`
+      : "終日"
+    : "";
 
   return (
     <div className="me-page">
@@ -256,7 +271,7 @@ export function MeShiftRequests() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => setWithdrawTarget(r)}
                       >
                         取り下げ
                       </SumiButton>
@@ -268,6 +283,45 @@ export function MeShiftRequests() {
           </table>
         )}
       </WashiCard>
+
+      <Modal
+        open={withdrawTarget !== null}
+        onClose={() => {
+          if (!withdrawing) setWithdrawTarget(null);
+        }}
+        eyebrow="取"
+        title="希望を取り下げますか"
+        maxWidth="480px"
+        footer={
+          <>
+            <SumiButton
+              variant="ghost"
+              onClick={() => setWithdrawTarget(null)}
+              disabled={withdrawing}
+              aria-label="希望取り下げをキャンセル"
+            >
+              キャンセル
+            </SumiButton>
+            <SumiButton
+              variant="danger"
+              onClick={handleDelete}
+              disabled={withdrawing}
+              aria-label="希望取り下げを確定"
+              data-autofocus="true"
+            >
+              取り下げを確定
+            </SumiButton>
+          </>
+        }
+      >
+        {withdrawTarget && withdrawTargetDate && withdrawTargetMeta ? (
+          <p>
+            {withdrawTargetDate.getMonth() + 1}/{withdrawTargetDate.getDate()} (
+            {jpWeekday(withdrawTargetDate)}) の{withdrawTargetMeta.label}・{withdrawTargetTime}
+            の希望を取り下げます。
+          </p>
+        ) : null}
+      </Modal>
     </div>
   );
 }
