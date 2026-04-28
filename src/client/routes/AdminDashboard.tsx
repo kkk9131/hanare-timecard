@@ -13,6 +13,8 @@ import {
   type Shift,
   type Store,
 } from "../api/admin";
+import { fetchMe, type Me } from "../api/auth";
+import type { ApiError } from "../api/client";
 import { type StoreFilter, StoreSwitcher } from "../components/StoreSwitcher";
 import { Heading } from "../components/ui/Heading";
 import { Stack } from "../components/ui/Stack";
@@ -104,6 +106,13 @@ function shiftCoverage(
 export function AdminDashboardPage() {
   const [storeFilter, setStoreFilter] = useState<StoreFilter>("all");
 
+  const meQuery = useQuery<Me, ApiError>({
+    queryKey: ["auth", "me"],
+    queryFn: ({ signal }) => fetchMe(signal),
+    retry: false,
+    staleTime: 30_000,
+  });
+
   const storesQuery = useQuery<Store[]>({
     queryKey: ["stores"],
     queryFn: ({ signal }) => listStores(signal),
@@ -190,6 +199,7 @@ export function AdminDashboardPage() {
   );
 
   const stores = storesQuery.data ?? [];
+  const isAdmin = meQuery.data?.role === "admin";
 
   return (
     <div className="wa-dash">
@@ -332,23 +342,39 @@ export function AdminDashboardPage() {
         <WashiCard padding="md" eyebrow="ショートカット" title="よく使う操作">
           <ul className="wa-dash__shortlist">
             <li>
-              <Link to="/admin/exports" className="wa-dash__shortlink">
-                <span className="wa-dash__shortlabel">今すぐエクスポート</span>
-                <span className="wa-dash__shortmeta">月次勤怠を xlsx / CSV で出力</span>
+              <Link to="/admin/corrections" className="wa-dash__shortlink">
+                <span className="wa-dash__shortlabel">修正申請を確認</span>
+                <span className="wa-dash__shortmeta">打刻漏れや間違いの申請を審査</span>
               </Link>
             </li>
             <li>
-              <Link to="/admin/employees" className="wa-dash__shortlink">
-                <span className="wa-dash__shortlabel">従業員マスタ</span>
-                <span className="wa-dash__shortmeta">入社・退社・権限設定</span>
+              <Link to="/admin/shifts" className="wa-dash__shortlink">
+                <span className="wa-dash__shortlabel">シフトを編成</span>
+                <span className="wa-dash__shortmeta">今週以降の下書き作成と公開</span>
               </Link>
             </li>
-            <li>
-              <Link to="/admin/audit" className="wa-dash__shortlink">
-                <span className="wa-dash__shortlabel">監査ログ</span>
-                <span className="wa-dash__shortmeta">変更履歴を確認</span>
-              </Link>
-            </li>
+            {isAdmin ? (
+              <>
+                <li>
+                  <Link to="/admin/exports" className="wa-dash__shortlink">
+                    <span className="wa-dash__shortlabel">今すぐエクスポート</span>
+                    <span className="wa-dash__shortmeta">月次勤怠を xlsx / CSV で出力</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/employees" className="wa-dash__shortlink">
+                    <span className="wa-dash__shortlabel">従業員マスタ</span>
+                    <span className="wa-dash__shortmeta">入社・退社・権限設定</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/admin/audit" className="wa-dash__shortlink">
+                    <span className="wa-dash__shortlabel">監査ログ</span>
+                    <span className="wa-dash__shortmeta">変更履歴を確認</span>
+                  </Link>
+                </li>
+              </>
+            ) : null}
           </ul>
         </WashiCard>
       </section>

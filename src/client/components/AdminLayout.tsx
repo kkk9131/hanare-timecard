@@ -1,4 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { NavLink, Outlet } from "react-router-dom";
+import { fetchMe, type Me } from "../api/auth";
+import type { ApiError } from "../api/client";
 import { AppShell } from "./ui/AppShell";
 import "./AdminLayout.css";
 
@@ -27,13 +30,23 @@ const NAV_ITEMS: NavItem[] = [
  * 右側 main に各ページの content を Outlet で出す。
  */
 export function AdminLayout() {
+  const meQuery = useQuery<Me, ApiError>({
+    queryKey: ["auth", "me"],
+    queryFn: ({ signal }) => fetchMe(signal),
+    retry: false,
+    staleTime: 30_000,
+  });
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => meQuery.data?.role === "admin" || !item.adminOnly,
+  );
+
   return (
     <AppShell
       storeName="管理"
       sidebar={
         <nav className="wa-admin-nav" aria-label="管理メニュー">
           <ul className="wa-admin-nav__list">
-            {NAV_ITEMS.map((item) => (
+            {visibleItems.map((item) => (
               <li key={item.to} className="wa-admin-nav__item">
                 <NavLink
                   to={item.to}
