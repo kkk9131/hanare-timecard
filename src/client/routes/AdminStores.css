@@ -128,6 +128,8 @@
 
 .wa-stores__actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   justify-content: flex-end;
 }
 
@@ -242,4 +244,89 @@
 .wa-stores__day:focus-visible {
   outline: 2px solid var(--kincha-400);
   outline-offset: 2px;
+}
+
+/* ---------- shift monthly settings ---------- */
+
+.wa-stores__shiftSettings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.wa-stores__shiftSettingsLead {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+}
+
+.wa-stores__shiftSettingsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  max-height: min(62vh, 680px);
+  overflow: auto;
+  padding-right: var(--space-2);
+}
+
+.wa-stores__shiftMonth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--sumi-850);
+}
+
+.wa-stores__shiftMonth h3 {
+  margin: 0;
+  color: var(--kincha-300);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body-lg);
+}
+
+.wa-stores__shiftMonth label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-meta);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-meta);
+}
+
+.wa-stores__shiftMonth input {
+  min-width: 0;
+  background: var(--sumi-900);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--washi-50);
+  font-family: var(--font-gothic);
+  font-size: var(--fs-body);
+  padding: var(--space-2);
+}
+
+.wa-stores__shiftMonth input:focus-visible {
+  outline: 2px solid var(--kincha-400);
+  outline-offset: 1px;
+}
+
+.wa-stores__shiftMonthCounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.wa-stores__shiftMonthBusy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .wa-stores__shiftSettingsGrid {
+    grid-template-columns: 1fr;
+  }
 }

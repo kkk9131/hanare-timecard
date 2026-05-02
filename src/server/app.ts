@@ -10,7 +10,12 @@ import { correctionsRoutes } from "./routes/corrections.js";
 import { employeesRoutes } from "./routes/employees.js";
 import { exportsRoutes } from "./routes/exports.js";
 import { punchesRoutes } from "./routes/punches.js";
-import { shiftRequestsRoutes, shiftsRoutes } from "./routes/shifts.js";
+import {
+  shiftPeriodsRoutes,
+  shiftRequestsRoutes,
+  shiftSettingsRoutes,
+  shiftsRoutes,
+} from "./routes/shifts.js";
 import { storesRoutes } from "./routes/stores.js";
 import { systemRoutes } from "./routes/system.js";
 
@@ -29,6 +34,8 @@ export function createApp(): Hono<{ Variables: HonoVariables }> {
   api.route("/employees", employeesRoutes);
   api.route("/punches", punchesRoutes);
   api.route("/shifts", shiftsRoutes);
+  api.route("/shift-settings", shiftSettingsRoutes);
+  api.route("/shift-periods", shiftPeriodsRoutes);
   api.route("/shift-requests", shiftRequestsRoutes);
   api.route("/corrections", correctionsRoutes);
   api.route("/audit", auditRoutes);

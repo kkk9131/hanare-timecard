@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  createOpenShiftPeriodForE2E,
   findDraftFreeEmptyShiftCell,
   findUnusedShiftTime,
   openAdminShifts,
@@ -58,6 +59,12 @@ test.describe("fixtask browser-use E2E improvements", () => {
   test("staff can withdraw a shift request through an app modal", async ({ page }) => {
     test.setTimeout(60_000);
 
+    await createOpenShiftPeriodForE2E(page, {
+      name: "fixtask E2E 希望取り下げ",
+      targetFrom: "2026-05-03",
+      targetTo: "2026-05-03",
+      weekdays: [0],
+    });
     await openStaffShiftRequests(page);
 
     await page.getByLabel("備考").fill("fixtask E2E 取り下げ確認");

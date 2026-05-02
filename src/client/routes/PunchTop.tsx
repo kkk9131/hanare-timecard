@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchPublicEmployees, kioskLogin, type PublicEmployee } from "../api/auth";
 import type { ApiError } from "../api/client";
+import { fetchPublicOpenShiftPeriods, type ShiftPeriod } from "../api/shifts";
 import { StoreSwitcher, type StoreFilter as StoreSwitcherValue } from "../components/StoreSwitcher";
 import { BigClock } from "../components/ui/BigClock";
 import { EmployeeTile } from "../components/ui/EmployeeTile";
@@ -42,6 +43,16 @@ export function PunchTop() {
   const storeIds = KNOWN_STORE_IDS;
   const activeStoreId = storeFilter === "all" ? (storeIds[0] ?? null) : storeFilter;
 
+  const openPeriodsQuery = useQuery<ShiftPeriod[]>({
+    queryKey: ["public-open-shift-periods", activeStoreId],
+    queryFn: ({ signal }) =>
+      activeStoreId == null
+        ? Promise.resolve([])
+        : fetchPublicOpenShiftPeriods(activeStoreId, signal),
+    enabled: activeStoreId != null,
+    staleTime: 30_000,
+  });
+
   // 表示対象 (store filter 適用)
   const visible = useMemo(() => {
     const all = employeesQuery.data ?? [];
@@ -67,7 +78,10 @@ export function PunchTop() {
     [],
   );
 
-  const onSelect = async (emp: PublicEmployee) => {
+  const onSelect = async (
+    emp: PublicEmployee,
+    destination: "/punch/board" | "/me/shift-requests",
+  ) => {
     selectEmployee(emp);
     setLoginError(null);
     setSubmittingEmployeeId(emp.id);
@@ -79,7 +93,7 @@ export function PunchTop() {
       }
       setSession(result.employee, activeStoreId);
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      navigate("/punch/board");
+      navigate(destination);
     } catch {
       setLoginError(
         "申し訳ございません、打刻の準備ができませんでした。しばらくしてからもう一度お試しください。",
@@ -88,6 +102,8 @@ export function PunchTop() {
       setSubmittingEmployeeId(null);
     }
   };
+
+  const hasOpenShiftPeriod = (openPeriodsQuery.data ?? []).length > 0;
 
   return (
     <ShojiTransition transitionKey="K01">
@@ -184,14 +200,26 @@ export function PunchTop() {
               }}
             >
               {visible.map((e) => (
-                <EmployeeTile
-                  key={e.id}
-                  name={e.name}
-                  kana={e.kana}
-                  state="idle"
-                  disabled={submittingEmployeeId != null}
-                  onClick={() => onSelect(e)}
-                />
+                <div key={e.id} className="wa-kiosk-top__employee-card">
+                  <EmployeeTile
+                    name={e.name}
+                    kana={e.kana}
+                    state="idle"
+                    disabled={submittingEmployeeId != null}
+                    onClick={() => onSelect(e, "/punch/board")}
+                  />
+                  {hasOpenShiftPeriod ? (
+                    <SumiButton
+                      variant="secondary"
+                      size="sm"
+                      block
+                      disabled={submittingEmployeeId != null}
+                      onClick={() => onSelect(e, "/me/shift-requests")}
+                    >
+                      シフト希望提出
+                    </SumiButton>
+                  ) : null}
+                </div>
               ))}
             </div>
           )}

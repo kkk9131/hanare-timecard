@@ -20,6 +20,9 @@ function clear(): void {
   const sqlite = (db as any).$client;
   sqlite.exec("DELETE FROM audit_logs");
   sqlite.exec("DELETE FROM shift_requests");
+  sqlite.exec("DELETE FROM shift_requirement_slots");
+  sqlite.exec("DELETE FROM shift_recruitment_periods");
+  sqlite.exec("DELETE FROM shift_monthly_settings");
   sqlite.exec("DELETE FROM shifts");
   sqlite.exec("DELETE FROM employee_stores");
   sqlite.exec("DELETE FROM sessions");
@@ -307,5 +310,21 @@ describe("task-4004 done_when (HTTP)", () => {
     const me2 = await req("/api/shift-requests/me", { sid: s.staffSid });
     const me2Json = (await me2.json()) as { requests: unknown[] };
     expect(me2Json.requests.length).toBe(0);
+  });
+
+  it("shift-requests POST returns 404 for unknown period_id", async () => {
+    const s = seed();
+    const create = await req("/api/shift-requests", {
+      method: "POST",
+      sid: s.staffSid,
+      body: JSON.stringify({
+        period_id: 999_999,
+        date: "2026-05-20",
+        preference: "preferred",
+      }),
+    });
+    expect(create.status).toBe(404);
+    const body = (await create.json()) as { error: string };
+    expect(body.error).toBe("not_found");
   });
 });

@@ -4,13 +4,55 @@ export const ADMIN = { loginId: "oyakata", password: "hanare2026" };
 export const STAFF_NAME = "山田 太郎";
 
 const ADD_SHIFT_BUTTON_RE = /^(.+) (\d{4}-\d{2}-\d{2}) にシフトを追加$/;
+const ADMIN_ONBOARDING_KEY = "hanare:onboarding:2026-04-admin-v1";
+
+export async function disableAdminOnboarding(page: Page) {
+  await page.addInitScript((key) => {
+    window.localStorage.setItem(`${key}:admin`, "true");
+    window.localStorage.setItem(`${key}:manager`, "true");
+  }, ADMIN_ONBOARDING_KEY);
+}
 
 export async function adminLogin(page: Page, account = ADMIN) {
+  await disableAdminOnboarding(page);
   await page.goto("/admin/login");
   await page.locator('input[name="login_id"]').fill(account.loginId);
   await page.locator('input[name="password"]').fill(account.password);
   await page.getByRole("button", { name: "管理者ログイン" }).click();
   await expect(page).toHaveURL(/\/admin$/, { timeout: 15_000 });
+}
+
+export async function createOpenShiftPeriodForE2E(
+  page: Page,
+  args: {
+    name: string;
+    targetFrom: string;
+    targetTo: string;
+    weekdays: number[];
+    requiredCount?: number;
+  },
+) {
+  await adminLogin(page);
+  const response = await page.request.post("/api/shift-periods", {
+    data: {
+      store_id: 1,
+      name: args.name,
+      target_from: args.targetFrom,
+      target_to: args.targetTo,
+      submission_from: "2026-01-01",
+      submission_to: "2026-12-31",
+      rules: [
+        {
+          slot_name: "E2E枠",
+          start_time: "10:00",
+          end_time: "18:00",
+          required_count: args.requiredCount ?? 1,
+          weekdays: args.weekdays,
+        },
+      ],
+    },
+  });
+  expect(response.ok()).toBeTruthy();
 }
 
 export async function openAdminShifts(page: Page) {

@@ -11,15 +11,20 @@ process.env.HANARE_DB_PATH = TMP_DB_PATH;
 
 const { db, schema } = await import("../../src/server/db/client.js");
 const {
+  autoDraftShiftsFromPeriod,
   createShift,
+  createShiftPeriod,
   createShiftRequest,
   deleteShift,
   detectConflicts,
   findConflicts,
   listShifts,
+  listShiftMonthlySettings,
+  listShiftRequests,
   publishShift,
   publishShifts,
   updateShift,
+  upsertShiftMonthlySettings,
 } = await import("../../src/server/services/shifts.js");
 
 function applyMigrations(): void {
@@ -31,6 +36,9 @@ function clearTables(): void {
   const sqlite = (db as any).$client;
   sqlite.exec("DELETE FROM audit_logs");
   sqlite.exec("DELETE FROM shift_requests");
+  sqlite.exec("DELETE FROM shift_requirement_slots");
+  sqlite.exec("DELETE FROM shift_recruitment_periods");
+  sqlite.exec("DELETE FROM shift_monthly_settings");
   sqlite.exec("DELETE FROM shifts");
   sqlite.exec("DELETE FROM employee_stores");
   sqlite.exec("DELETE FROM sessions");
@@ -330,6 +338,184 @@ describe("shift requests", () => {
       end_time: "16:00",
       note: "afternoon",
     });
+    expect("kind" in r).toBe(false);
+    if ("kind" in r) return;
     expect(r.id).toBeGreaterThan(0);
+  });
+
+  it("replaces same-day period request with one row", () => {
+    const { storeId, empA, managerId } = seedBaseline();
+    const periodResult = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(periodResult.kind).toBe("ok");
+    if (periodResult.kind !== "ok") return;
+
+    const first = createShiftRequest(
+      {
+        employee_id: empA,
+        period_id: periodResult.period.id,
+        date: "2026-05-11",
+        preference: "preferred",
+        start_time: "10:00",
+        end_time: "14:00",
+        note: "first",
+      },
+      Date.parse("2026-05-05T00:00:00Z"),
+    );
+    expect("kind" in first).toBe(false);
+    if ("kind" in first) return;
+
+    const second = createShiftRequest(
+      {
+        employee_id: empA,
+        period_id: periodResult.period.id,
+        date: "2026-05-11",
+        preference: "unavailable",
+        start_time: null,
+        end_time: null,
+        note: "changed",
+      },
+      Date.parse("2026-05-06T00:00:00Z"),
+    );
+    expect("kind" in second).toBe(false);
+    if ("kind" in second) return;
+
+    const requests = listShiftRequests({ period_id: periodResult.period.id });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.id).toBe(first.id);
+    expect(requests[0]?.preference).toBe("unavailable");
+    expect(requests[0]?.note).toBe("changed");
+
+    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for schema verification
+    const indexes = (db as any).$client.pragma("index_list('shift_requests')") as Array<{
+      name: string;
+      unique: number;
+    }>;
+    expect(indexes.some((idx) => idx.name === "idx_shift_req_period_emp_date" && idx.unique)).toBe(
+      true,
+    );
+  });
+});
+
+describe("shift recruitment periods", () => {
+  it("returns conflict for overlapping open periods in the same store", () => {
+    const { storeId, managerId } = seedBaseline();
+    const first = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(first.kind).toBe("ok");
+
+    const overlapping = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-12",
+      target_to: "2026-05-13",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(overlapping.kind).toBe("conflict");
+  });
+
+  it("creates requirement slots and auto-drafts matching requests", () => {
+    const { storeId, empA, empB, managerId } = seedBaseline();
+    const periodResult = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+      rules: [
+        {
+          slot_name: "昼",
+          start_time: "10:00",
+          end_time: "14:00",
+          required_count: 1,
+          weekdays: [1, 2, 3, 4, 5],
+        },
+      ],
+    });
+    expect(periodResult.kind).toBe("ok");
+    if (periodResult.kind !== "ok") return;
+    expect(periodResult.slots.length).toBe(2);
+
+    const a = createShiftRequest(
+      {
+        employee_id: empA,
+        period_id: periodResult.period.id,
+        date: "2026-05-11",
+        preference: "preferred",
+        start_time: "09:00",
+        end_time: "15:00",
+      },
+      Date.parse("2026-05-05T00:00:00Z"),
+    );
+    const b = createShiftRequest(
+      {
+        employee_id: empB,
+        period_id: periodResult.period.id,
+        date: "2026-05-12",
+        preference: "available",
+        start_time: null,
+        end_time: null,
+      },
+      Date.parse("2026-05-05T00:00:00Z"),
+    );
+    expect("kind" in a).toBe(false);
+    expect("kind" in b).toBe(false);
+
+    const drafted = autoDraftShiftsFromPeriod(periodResult.period.id, managerId);
+    expect(drafted.kind).toBe("ok");
+    if (drafted.kind !== "ok") return;
+    expect(drafted.created).toHaveLength(2);
+    expect(drafted.unfilled_slots).toHaveLength(0);
+  });
+
+  it("uses store monthly settings when creating a period without inline rules", () => {
+    const { storeId, managerId } = seedBaseline();
+    const saved = upsertShiftMonthlySettings(
+      storeId,
+      [
+        {
+          month: 5,
+          slot_name: "月次枠",
+          weekday_required_count: 2,
+          holiday_required_count: 3,
+          busy_required_count: 5,
+          busy_from_day: 12,
+          busy_to_day: 12,
+        },
+      ],
+      managerId,
+    );
+    expect(saved.kind).toBe("ok");
+    expect(
+      listShiftMonthlySettings(storeId).find((s) => s.month === 5)?.weekday_required_count,
+    ).toBe(2);
+
+    const periodResult = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(periodResult.kind).toBe("ok");
+    if (periodResult.kind !== "ok") return;
+    expect(periodResult.slots.map((s) => s.required_count)).toEqual([2, 5]);
+    expect(periodResult.slots[0]?.start_time).toBe("10:00");
+    expect(periodResult.slots[0]?.end_time).toBe("22:00");
   });
 });

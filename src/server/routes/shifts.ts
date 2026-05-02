@@ -1,13 +1,19 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import {
+  createShiftPeriodSchema,
   createShiftRequestSchema,
   createShiftSchema,
+  listShiftMonthlySettingsQuerySchema,
+  listShiftPeriodsQuerySchema,
   listShiftRequestsQuerySchema,
   listShiftsQuerySchema,
   publishShiftSchema,
   shiftConflictsQuerySchema,
+  shiftPeriodIdParamSchema,
+  updateShiftPeriodSchema,
   updateShiftSchema,
+  upsertShiftMonthlySettingsSchema,
 } from "../../shared/schemas.js";
 import {
   assertCanAccessEmployee,
@@ -18,21 +24,33 @@ import {
 } from "../middleware/auth.js";
 import type { HonoVariables } from "../middleware/session.js";
 import {
+  autoDraftShiftsFromPeriod,
   createShift,
+  createShiftPeriod,
   createShiftRequest,
   deleteShift,
   deleteShiftRequest,
   detectConflicts,
   getShift,
+  getShiftPeriod,
+  getShiftPeriodSummary,
   getShiftRequest,
+  listOpenShiftPeriodsForEmployee,
+  listShiftMonthlySettings,
+  listShiftPeriods,
   listShiftRequests,
   listShifts,
   publishShifts,
+  todayYmd,
   updateShift,
+  updateShiftPeriodStatus,
+  upsertShiftMonthlySettings,
 } from "../services/shifts.js";
 
 export const shiftsRoutes = new Hono<{ Variables: HonoVariables }>();
 export const shiftRequestsRoutes = new Hono<{ Variables: HonoVariables }>();
+export const shiftPeriodsRoutes = new Hono<{ Variables: HonoVariables }>();
+export const shiftSettingsRoutes = new Hono<{ Variables: HonoVariables }>();
 
 // ----- helpers -----
 
@@ -264,6 +282,200 @@ shiftsRoutes.delete("/:id", requireRole("manager", "admin"), (c) => {
 
 // ===== /api/shift-requests =====
 
+// ===== /api/shift-periods =====
+
+// ===== /api/shift-settings =====
+
+shiftSettingsRoutes.get("/monthly", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const parsed = listShiftMonthlySettingsQuerySchema.safeParse({
+    store_id: c.req.query("store_id"),
+  });
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
+  assertCanAccessStore(user, parsed.data.store_id);
+  const settings = listShiftMonthlySettings(parsed.data.store_id);
+  return c.json({ settings });
+});
+
+shiftSettingsRoutes.put("/monthly", requireRole("manager", "admin"), async (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const raw = await c.req.json().catch(() => null);
+  const parsed = upsertShiftMonthlySettingsSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
+  assertCanAccessStore(user, parsed.data.store_id);
+  const result = upsertShiftMonthlySettings(
+    parsed.data.store_id,
+    parsed.data.settings,
+    user.employeeId,
+  );
+  if (result.kind === "not_found") {
+    return c.json({ error: "not_found", message: "店舗が見つかりません" }, 404);
+  }
+  if (result.kind === "invalid") {
+    return c.json({ error: "bad_request", message: result.message }, 400);
+  }
+  if (result.kind === "conflict") {
+    return c.json({ error: "conflict", message: "設定が重複しています" }, 409);
+  }
+  return c.json({ settings: result.settings });
+});
+
+shiftPeriodsRoutes.get("/", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const parsed = listShiftPeriodsQuerySchema.safeParse({
+    store_id: c.req.query("store_id"),
+    from: c.req.query("from"),
+    to: c.req.query("to"),
+    open_only: c.req.query("open_only"),
+  });
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
+  const storeScope = scopeStoreQuery(user, parsed.data.store_id);
+  const periods = listShiftPeriods({
+    ...parsed.data,
+    store_ids: storeScope.store_id != null ? [storeScope.store_id] : storeScope.store_ids,
+  });
+  return c.json({ periods });
+});
+
+shiftPeriodsRoutes.get("/public-open", (c) => {
+  const parsed = listShiftPeriodsQuerySchema.safeParse({
+    store_id: c.req.query("store_id"),
+    open_only: "true",
+  });
+  if (!parsed.success || parsed.data.store_id == null) {
+    return c.json({ error: "bad_request", message: "store_idが必要です" }, 400);
+  }
+  const today = todayYmd();
+  const periods = listShiftPeriods({ store_id: parsed.data.store_id, open_only: true }).filter(
+    (p) => p.submission_from <= today && today <= p.submission_to,
+  );
+  return c.json({ periods });
+});
+
+shiftPeriodsRoutes.get("/open", requireAuth, (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const today = todayYmd();
+  const periods = listOpenShiftPeriodsForEmployee(user.employeeId, today);
+  return c.json({ periods });
+});
+
+shiftPeriodsRoutes.post("/", requireRole("manager", "admin"), async (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const raw = await c.req.json().catch(() => null);
+  const parsed = createShiftPeriodSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
+  assertCanAccessStore(user, parsed.data.store_id);
+  const result = createShiftPeriod({ ...parsed.data, created_by: user.employeeId });
+  if (result.kind === "not_found") {
+    return c.json({ error: "not_found", message: "店舗が見つかりません" }, 404);
+  }
+  if (result.kind === "invalid") {
+    return c.json({ error: "bad_request", message: result.message }, 400);
+  }
+  if (result.kind === "conflict") {
+    return c.json({ error: "conflict", message: "募集期間が重複しています" }, 409);
+  }
+  return c.json({ period: result.period, slots: result.slots }, 201);
+});
+
+shiftPeriodsRoutes.get("/:id/summary", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const parsed = shiftPeriodIdParamSchema.safeParse({ id: c.req.param("id") });
+  if (!parsed.success) return c.json({ error: "bad_request", message: "idが不正です" }, 400);
+  const period = getShiftPeriod(parsed.data.id);
+  if (!period) return c.json({ error: "not_found", message: "募集期間が見つかりません" }, 404);
+  assertCanAccessStore(user, period.store_id);
+  const summary = getShiftPeriodSummary(period.id);
+  return c.json(summary);
+});
+
+shiftPeriodsRoutes.post("/:id/auto-draft", requireRole("manager", "admin"), (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const parsed = shiftPeriodIdParamSchema.safeParse({ id: c.req.param("id") });
+  if (!parsed.success) return c.json({ error: "bad_request", message: "idが不正です" }, 400);
+  const period = getShiftPeriod(parsed.data.id);
+  if (!period) return c.json({ error: "not_found", message: "募集期間が見つかりません" }, 404);
+  assertCanAccessStore(user, period.store_id);
+  const result = autoDraftShiftsFromPeriod(period.id, user.employeeId);
+  if (result.kind === "not_found") {
+    return c.json({ error: "not_found", message: "募集期間が見つかりません" }, 404);
+  }
+  if (result.kind === "invalid") {
+    return c.json({ error: "bad_request", message: result.message }, 400);
+  }
+  return c.json(result);
+});
+
+shiftPeriodsRoutes.patch("/:id", requireRole("manager", "admin"), async (c) => {
+  const user = c.get("user");
+  if (!user) throw new HTTPException(401, { message: "認証が必要です" });
+  const idParsed = shiftPeriodIdParamSchema.safeParse({ id: c.req.param("id") });
+  if (!idParsed.success) return c.json({ error: "bad_request", message: "idが不正です" }, 400);
+  const period = getShiftPeriod(idParsed.data.id);
+  if (!period) return c.json({ error: "not_found", message: "募集期間が見つかりません" }, 404);
+  assertCanAccessStore(user, period.store_id);
+  const raw = await c.req.json().catch(() => null);
+  const parsed = updateShiftPeriodSchema.safeParse(raw);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "bad_request",
+        message: "リクエストが不正です",
+        details: parsed.error.flatten(),
+      },
+      400,
+    );
+  }
+  const result = updateShiftPeriodStatus(period.id, parsed.data.status, user.employeeId);
+  if (result.kind !== "ok") {
+    return c.json({ error: "not_found", message: "募集期間が見つかりません" }, 404);
+  }
+  return c.json({ period: result.period });
+});
+
 /**
  * GET /api/shift-requests (manager+)
  */
@@ -273,6 +485,7 @@ shiftRequestsRoutes.get("/", requireRole("manager", "admin"), (c) => {
   const parsed = listShiftRequestsQuerySchema.safeParse({
     from: c.req.query("from"),
     to: c.req.query("to"),
+    period_id: c.req.query("period_id"),
   });
   if (!parsed.success) {
     return c.json(
@@ -301,6 +514,7 @@ shiftRequestsRoutes.get("/me", requireAuth, (c) => {
   const parsed = listShiftRequestsQuerySchema.safeParse({
     from: c.req.query("from"),
     to: c.req.query("to"),
+    period_id: c.req.query("period_id"),
   });
   if (!parsed.success) {
     return c.json(
@@ -340,12 +554,25 @@ shiftRequestsRoutes.post("/", requireAuth, async (c) => {
   }
   const created = createShiftRequest({
     employee_id: user.employeeId,
+    period_id: parsed.data.period_id ?? null,
+    store_id: parsed.data.store_id ?? null,
     date: parsed.data.date,
     start_time: parsed.data.start_time ?? null,
     end_time: parsed.data.end_time ?? null,
     preference: parsed.data.preference,
     note: parsed.data.note,
   });
+  if ("kind" in created) {
+    if (created.kind === "invalid") {
+      return c.json({ error: "bad_request", message: created.message }, 400);
+    }
+    if (created.kind === "not_found") {
+      return c.json({ error: "not_found", message: "見つかりません" }, 404);
+    }
+    if (created.kind === "conflict") {
+      return c.json({ error: "conflict", message: "希望が重複しています" }, 409);
+    }
+  }
   return c.json({ request: created }, 201);
 });
 

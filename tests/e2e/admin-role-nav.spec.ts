@@ -1,9 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
+import { disableAdminOnboarding } from "./helpers";
 
 const ADMIN = { loginId: "oyakata", password: "hanare2026" };
 const MANAGER = { loginId: "suzumean_mgr", password: "suzumean2026" };
 
 async function adminLogin(page: Page, account: { loginId: string; password: string }) {
+  await disableAdminOnboarding(page);
   await page.goto("/admin/login");
   await page.locator('input[name="login_id"]').fill(account.loginId);
   await page.locator('input[name="password"]').fill(account.password);
@@ -16,13 +18,13 @@ test.describe("task-7006 admin role navigation", () => {
     await adminLogin(page, MANAGER);
 
     const nav = page.getByRole("navigation", { name: "管理メニュー" });
-    await expect(nav.getByRole("link", { name: "ダッシュボード" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "シフト" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "修正申請" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "従業員" })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: "店舗" })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: "エクスポート" })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: "監査ログ" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "ダッシュボード", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "シフト", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "修正申請", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "従業員", exact: true })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "店舗", exact: true })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "エクスポート", exact: true })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "監査ログ", exact: true })).toHaveCount(0);
 
     await expect(page.getByRole("link", { name: /今すぐエクスポート/ })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /従業員マスタ/ })).toHaveCount(0);
@@ -33,13 +35,13 @@ test.describe("task-7006 admin role navigation", () => {
     await adminLogin(page, ADMIN);
 
     const nav = page.getByRole("navigation", { name: "管理メニュー" });
-    await expect(nav.getByRole("link", { name: "ダッシュボード" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "シフト" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "修正申請" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "従業員" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "店舗" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "エクスポート" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "監査ログ" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "ダッシュボード", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "シフト", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "修正申請", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "従業員", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "店舗", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "エクスポート", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "監査ログ", exact: true })).toBeVisible();
   });
 
   test("forbidden admin-only routes show 403 guidance instead of login", async ({ page }) => {

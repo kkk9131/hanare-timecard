@@ -91,6 +91,9 @@ export function AdminLayout() {
             ))}
           </ul>
           <div className="wa-admin-nav__guide">
+            <a className="wa-admin-nav__kioskLink" href="/">
+              打刻画面へ
+            </a>
             {helpTopic ? (
               <Link className="wa-admin-nav__helpLink" to={`/admin/help/${helpTopic.topic}`}>
                 <span className="wa-admin-nav__helpEyebrow">このページ</span>

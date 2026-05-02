@@ -20,6 +20,9 @@ function clear(): void {
   const sqlite = (db as any).$client;
   sqlite.exec("DELETE FROM audit_logs");
   sqlite.exec("DELETE FROM shift_requests");
+  sqlite.exec("DELETE FROM shift_requirement_slots");
+  sqlite.exec("DELETE FROM shift_recruitment_periods");
+  sqlite.exec("DELETE FROM shift_monthly_settings");
   sqlite.exec("DELETE FROM shifts");
   sqlite.exec("DELETE FROM employee_stores");
   sqlite.exec("DELETE FROM sessions");

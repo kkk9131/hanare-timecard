@@ -1,17 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  autoDraftShiftPeriod,
   createShift,
+  createShiftPeriod,
   deleteShift,
   type Employee,
   getShiftConflicts,
+  getShiftPeriodSummary,
   listEmployees,
+  listShiftPeriods,
   listShiftRequests,
   listShifts,
   listStores,
   publishShifts,
   type Shift,
   type ShiftConflictReport,
+  type ShiftPeriod,
+  type ShiftPeriodSummary,
   type ShiftRequest,
   type Store,
   updateShift,
@@ -114,6 +120,20 @@ export function AdminShiftsPage() {
 
   const fromISO = toISO(range.from);
   const toISOStr = toISO(range.to);
+  const todayISO = toISO(new Date());
+
+  const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(null);
+  const [periodName, setPeriodName] = useState("");
+  const [periodTargetFrom, setPeriodTargetFrom] = useState("");
+  const [periodTargetTo, setPeriodTargetTo] = useState("");
+  const [submissionFrom, setSubmissionFrom] = useState(todayISO);
+  const [submissionTo, setSubmissionTo] = useState(toISO(addDays(new Date(), 7)));
+  const [periodError, setPeriodError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!periodTargetFrom) setPeriodTargetFrom(fromISO);
+    if (!periodTargetTo) setPeriodTargetTo(toISOStr);
+  }, [fromISO, periodTargetFrom, periodTargetTo, toISOStr]);
 
   const employeesQuery = useQuery<Employee[]>({
     queryKey: ["employees", activeStoreId],
@@ -140,9 +160,34 @@ export function AdminShiftsPage() {
     enabled: activeStoreId != null,
   });
 
+  const periodsQuery = useQuery<ShiftPeriod[]>({
+    queryKey: ["shift-periods", activeStoreId, fromISO, toISOStr],
+    queryFn: ({ signal }) =>
+      listShiftPeriods({ store_id: activeStoreId, from: fromISO, to: toISOStr }, signal),
+    enabled: activeStoreId != null,
+  });
+
+  useEffect(() => {
+    const periods = periodsQuery.data ?? [];
+    if (selectedPeriodId != null && periods.some((p) => p.id === selectedPeriodId)) return;
+    setSelectedPeriodId(periods[0]?.id ?? null);
+  }, [periodsQuery.data, selectedPeriodId]);
+
+  const periodSummaryQuery = useQuery<ShiftPeriodSummary>({
+    queryKey: ["shift-period-summary", selectedPeriodId],
+    queryFn: ({ signal }) => {
+      if (selectedPeriodId == null) throw new Error("period not selected");
+      return getShiftPeriodSummary(selectedPeriodId, signal);
+    },
+    enabled: selectedPeriodId != null,
+  });
+
   const requestsQuery = useQuery<ShiftRequest[]>({
-    queryKey: ["shift-requests", fromISO, toISOStr],
-    queryFn: ({ signal }) => listShiftRequests({ from: fromISO, to: toISOStr }, signal),
+    queryKey: ["shift-requests", fromISO, toISOStr, selectedPeriodId],
+    queryFn: ({ signal }) =>
+      selectedPeriodId != null
+        ? listShiftRequests({ period_id: selectedPeriodId }, signal)
+        : listShiftRequests({ from: fromISO, to: toISOStr }, signal),
   });
 
   // ---------- shift index ----------
@@ -197,7 +242,50 @@ export function AdminShiftsPage() {
   function invalidateShifts() {
     queryClient.invalidateQueries({ queryKey: ["shifts", "range"] });
     queryClient.invalidateQueries({ queryKey: ["shift-conflicts"] });
+    queryClient.invalidateQueries({ queryKey: ["shift-periods"] });
+    queryClient.invalidateQueries({ queryKey: ["shift-period-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["shift-requests"] });
   }
+
+  const createPeriodMut = useMutation({
+    mutationFn: () => {
+      if (activeStoreId == null) throw new Error("store required");
+      if (periodTargetFrom > periodTargetTo) throw new Error("target range invalid");
+      if (submissionFrom > submissionTo) throw new Error("submission range invalid");
+      return createShiftPeriod({
+        store_id: activeStoreId,
+        name: periodName.trim() || undefined,
+        target_from: periodTargetFrom,
+        target_to: periodTargetTo,
+        submission_from: submissionFrom,
+        submission_to: submissionTo,
+      });
+    },
+    onMutate: () => setPeriodError(null),
+    onSuccess: (data) => {
+      setSelectedPeriodId(data.period.id);
+      setPeriodName("");
+      queryClient.invalidateQueries({ queryKey: ["shift-periods"] });
+      queryClient.invalidateQueries({ queryKey: ["shift-period-summary"] });
+    },
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : "";
+      if (message === "target range invalid") {
+        setPeriodError("対象期間の日付順を確認してください。");
+      } else if (message === "submission range invalid") {
+        setPeriodError("提出期間の日付順を確認してください。");
+      } else {
+        setPeriodError("募集期間の作成に失敗しました。");
+      }
+    },
+  });
+
+  const autoDraftMut = useMutation({
+    mutationFn: (periodId: number) => autoDraftShiftPeriod(periodId),
+    onSuccess: () => {
+      invalidateShifts();
+    },
+  });
 
   const createMut = useMutation({
     mutationFn: (body: {
@@ -354,6 +442,12 @@ export function AdminShiftsPage() {
 
   const employees = employeesQuery.data ?? [];
   const draftCount = (shiftsQuery.data ?? []).filter((s) => s.status === "draft").length;
+  const periodSummary = periodSummaryQuery.data ?? null;
+  const missingCount = periodSummary?.missing_employee_ids.length ?? 0;
+  const shortageSlotCount = periodSummary?.slots.filter((s) => s.shortage_count > 0).length ?? 0;
+  const overRequestSlotCount =
+    periodSummary?.slots.filter((s) => s.over_requested_count > 0).length ?? 0;
+  const unfitRequestCount = periodSummary?.unfit_requests.length ?? 0;
 
   // grid columns: 1 fixed (employee) + days
   const gridTemplate = `minmax(140px, 180px) repeat(${range.days.length}, minmax(110px, 1fr))`;
@@ -538,6 +632,157 @@ export function AdminShiftsPage() {
         ) : (
           <p className="wa-shifts__requests-empty">この期間に提出された希望はありません。</p>
         )}
+      </details>
+
+      <section className="wa-shifts__periods" aria-label="シフト募集管理">
+        <div className="wa-shifts__period-card">
+          <div className="wa-shifts__period-head">
+            <div>
+              <h2>シフト募集</h2>
+              <p>
+                対象期間と提出期間を決めます。平日・土日祝・繁忙期の人数は店舗画面の月次設定を使います。
+              </p>
+            </div>
+          </div>
+
+          <form
+            className="wa-shifts__period-form wa-shifts__period-form--compact"
+            onSubmit={(e) => {
+              e.preventDefault();
+              createPeriodMut.mutate();
+            }}
+          >
+            <label>
+              募集名
+              <input
+                type="text"
+                value={periodName}
+                placeholder={`${periodTargetFrom || fromISO}〜${periodTargetTo || toISOStr}`}
+                onChange={(e) => setPeriodName(e.target.value)}
+              />
+            </label>
+            <label>
+              対象開始
+              <input
+                type="date"
+                value={periodTargetFrom}
+                onChange={(e) => setPeriodTargetFrom(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              対象終了
+              <input
+                type="date"
+                value={periodTargetTo}
+                onChange={(e) => setPeriodTargetTo(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              提出開始
+              <input
+                type="date"
+                value={submissionFrom}
+                onChange={(e) => setSubmissionFrom(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              提出締切
+              <input
+                type="date"
+                value={submissionTo}
+                onChange={(e) => setSubmissionTo(e.target.value)}
+                required
+              />
+            </label>
+            <div className="wa-shifts__period-form-actions">
+              {periodError ? <span className="wa-shifts__status--error">{periodError}</span> : null}
+              <SumiButton
+                type="submit"
+                variant="secondary"
+                disabled={activeStoreId == null || createPeriodMut.isPending}
+              >
+                募集を作成
+              </SumiButton>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <details className="wa-shifts__summary-details">
+        <summary className="wa-shifts__summary-trigger">
+          提出状況
+          {periodSummary ? (
+            <span>
+              {periodSummary.period.name} ／ 未提出 {missingCount} 人・不足 {shortageSlotCount} 件
+            </span>
+          ) : null}
+        </summary>
+        <div className="wa-shifts__period-card wa-shifts__period-card--summary">
+          <div className="wa-shifts__period-head">
+            <div>
+              <h2>提出状況</h2>
+              <p>未提出、不足、希望過多、枠外希望を確認します。</p>
+            </div>
+            <SumiButton
+              variant="primary"
+              disabled={selectedPeriodId == null || autoDraftMut.isPending}
+              onClick={() => {
+                if (selectedPeriodId != null) autoDraftMut.mutate(selectedPeriodId);
+              }}
+            >
+              希望から下書き作成
+            </SumiButton>
+          </div>
+          {selectedPeriodId == null ? (
+            <p className="wa-shifts__requests-empty">この期間の募集はまだありません。</p>
+          ) : periodSummaryQuery.isLoading ? (
+            <p className="wa-shifts__requests-empty">提出状況を読み込み中…</p>
+          ) : periodSummary ? (
+            <>
+              <div className="wa-shifts__period-stats">
+                <span>
+                  未提出 <strong>{missingCount}</strong> 人
+                </span>
+                <span>
+                  不足枠 <strong>{shortageSlotCount}</strong> 件
+                </span>
+                <span>
+                  希望過多 <strong>{overRequestSlotCount}</strong> 件
+                </span>
+                <span>
+                  調整必要 <strong>{unfitRequestCount}</strong> 件
+                </span>
+              </div>
+              {autoDraftMut.isSuccess ? (
+                <p className="wa-shifts__period-result">
+                  下書き {autoDraftMut.data.created.length} 件を作成しました。未達成の枠は{" "}
+                  {autoDraftMut.data.unfilled_slots.length} 件です。
+                </p>
+              ) : null}
+              {autoDraftMut.isError ? (
+                <p className="wa-shifts__modal-error">自動作成に失敗しました。</p>
+              ) : null}
+              <div className="wa-shifts__slot-list">
+                {periodSummary.slots.slice(0, 12).map((slot) => (
+                  <div key={slot.id} className="wa-shifts__slot-item">
+                    <strong>
+                      {slot.date} {slot.slot_name}
+                    </strong>
+                    <span>
+                      必要 {slot.required_count} / 配置済み {slot.assigned_count} / 希望{" "}
+                      {slot.requested_count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="wa-shifts__requests-empty">提出状況の取得に失敗しました。</p>
+          )}
+        </div>
       </details>
 
       {editor ? (

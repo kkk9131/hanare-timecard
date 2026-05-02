@@ -551,6 +551,216 @@
   color: var(--washi-300);
 }
 
+/* ---------- recruitment periods ---------- */
+
+.wa-shifts__periods {
+  display: block;
+}
+
+.wa-shifts__period-card {
+  border: 1px solid var(--sumi-700);
+  border-radius: var(--radius-md);
+  background: var(--sumi-800);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.wa-shifts__period-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.wa-shifts__period-head h2 {
+  margin: 0;
+  font-family: var(--font-mincho);
+  font-size: 20px;
+  color: var(--washi-50);
+  letter-spacing: 0.04em;
+}
+
+.wa-shifts__period-head p,
+.wa-shifts__period-result {
+  margin: 4px 0 0;
+  color: var(--washi-300);
+  font-family: var(--font-gothic);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+}
+
+.wa-shifts__period-form input {
+  background: var(--sumi-900);
+  border: 1px solid var(--sumi-700);
+  color: var(--washi-50);
+  font-family: var(--font-gothic);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+}
+
+.wa-shifts__period-form input:focus-visible {
+  outline: 2px solid var(--kincha-400);
+  outline-offset: 1px;
+}
+
+.wa-shifts__period-form {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  gap: var(--space-3);
+}
+
+.wa-shifts__period-form--compact {
+  grid-template-columns: minmax(190px, 1.4fr) repeat(4, minmax(130px, 1fr));
+}
+
+.wa-shifts__period-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--washi-300);
+  font-family: var(--font-gothic);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.wa-shifts__period-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.wa-shifts__period-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.wa-shifts__period-stats span,
+.wa-shifts__slot-item {
+  background: var(--sumi-900);
+  border: 1px solid var(--sumi-700);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-family: var(--font-gothic);
+  font-size: 12px;
+  color: var(--washi-300);
+  letter-spacing: 0.05em;
+}
+
+.wa-shifts__period-stats strong {
+  color: var(--kincha-300);
+  font-size: 18px;
+  font-family: var(--font-mincho);
+}
+
+.wa-shifts__slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 230px;
+  overflow: auto;
+}
+
+.wa-shifts__slot-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wa-shifts__slot-item strong {
+  color: var(--washi-50);
+  font-family: var(--font-mincho);
+  font-size: 13px;
+}
+
+.wa-shifts__summary-details {
+  border: 1px solid var(--sumi-700);
+  border-radius: var(--radius-md);
+  background: var(--sumi-800);
+}
+
+.wa-shifts__summary-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+  padding: var(--space-4);
+  color: var(--washi-50);
+  font-family: var(--font-mincho);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  list-style: none;
+}
+
+.wa-shifts__summary-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.wa-shifts__summary-trigger::before {
+  content: "▶";
+  color: var(--kincha-400);
+  font-family: var(--font-gothic);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+
+.wa-shifts__summary-details[open] .wa-shifts__summary-trigger::before {
+  transform: rotate(90deg);
+}
+
+.wa-shifts__summary-trigger span {
+  margin-left: auto;
+  color: var(--washi-300);
+  font-family: var(--font-gothic);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.wa-shifts__summary-details .wa-shifts__period-card {
+  border: none;
+  border-top: 1px solid var(--sumi-700);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+@media (max-width: 1180px) {
+  .wa-shifts__periods {
+    grid-template-columns: 1fr;
+  }
+
+  .wa-shifts__period-form,
+  .wa-shifts__period-form--compact {
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .wa-shifts__period-head {
+    flex-direction: column;
+  }
+
+  .wa-shifts__period-form,
+  .wa-shifts__period-form--compact,
+  .wa-shifts__period-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .wa-shifts__summary-trigger {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wa-shifts__summary-trigger span {
+    margin-left: 0;
+  }
+}
+
 /* month view: smaller chips, denser cells */
 .wa-shifts__grid--month {
   min-width: 1100px;

@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type CreateStoreBody,
   createStore,
+  listShiftMonthlySettings,
   listStores,
+  type ShiftMonthlySetting,
   type Store,
+  saveShiftMonthlySettings,
   type UpdateStoreBody,
   updateStore,
 } from "../api/admin";
@@ -41,6 +44,8 @@ type ToastState = {
   message: string;
 } | null;
 
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
 function storeBadgeLabel(store: Store): string {
   const code = store.code.trim().toLowerCase();
   if (["jakuan", "zyakuan", "zyakuann", "suzumean"].includes(code)) return "本店";
@@ -76,12 +81,29 @@ export function AdminStoresPage() {
   const qc = useQueryClient();
   const [mode, setMode] = useState<EditMode>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const [settingsStore, setSettingsStore] = useState<Store | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<ShiftMonthlySetting[]>([]);
   const [toast, setToast] = useState<ToastState>(null);
 
   const storesQuery = useQuery<Store[]>({
     queryKey: ["stores", "all"],
     queryFn: ({ signal }) => listStores(signal),
   });
+
+  const monthlySettingsQuery = useQuery<ShiftMonthlySetting[]>({
+    queryKey: ["shift-monthly-settings", settingsStore?.id],
+    queryFn: ({ signal }) => {
+      if (!settingsStore) return Promise.resolve([]);
+      return listShiftMonthlySettings(settingsStore.id, signal);
+    },
+    enabled: settingsStore !== null,
+  });
+
+  useEffect(() => {
+    if (monthlySettingsQuery.data) {
+      setSettingsDraft(monthlySettingsQuery.data);
+    }
+  }, [monthlySettingsQuery.data]);
 
   const createMutation = useMutation({
     mutationFn: (body: CreateStoreBody) => createStore(body),
@@ -109,6 +131,33 @@ export function AdminStoresPage() {
     },
   });
 
+  const settingsMutation = useMutation({
+    mutationFn: () => {
+      if (!settingsStore) throw new Error("store required");
+      return saveShiftMonthlySettings({
+        store_id: settingsStore.id,
+        settings: settingsDraft.map((s) => ({
+          month: s.month,
+          slot_name: s.slot_name || "基本枠",
+          weekday_required_count: s.weekday_required_count,
+          holiday_required_count: s.holiday_required_count,
+          busy_required_count: s.busy_required_count,
+          busy_from_day: s.busy_from_day ?? null,
+          busy_to_day: s.busy_to_day ?? null,
+        })),
+      });
+    },
+    onSuccess: () => {
+      setToast({ tone: "success", message: "シフト月次設定を保存しました。" });
+      setSettingsStore(null);
+      setSettingsDraft([]);
+      qc.invalidateQueries({ queryKey: ["shift-monthly-settings"] });
+    },
+    onError: () => {
+      setToast({ tone: "danger", message: "シフト月次設定の保存に失敗しました。" });
+    },
+  });
+
   function openCreate() {
     setForm(emptyForm());
     setMode({ kind: "create" });
@@ -133,6 +182,10 @@ export function AdminStoresPage() {
     } else {
       updateMutation.mutate({ id: mode.store.id, body: { ...form } });
     }
+  }
+
+  function updateMonthlySetting(month: number, patch: Partial<ShiftMonthlySetting>) {
+    setSettingsDraft((prev) => prev.map((s) => (s.month === month ? { ...s, ...patch } : s)));
   }
 
   const stores = storesQuery.data ?? [];
@@ -205,6 +258,9 @@ export function AdminStoresPage() {
                     <div className="wa-stores__actions">
                       <SumiButton variant="ghost" size="sm" onClick={() => openEdit(s)}>
                         編集する
+                      </SumiButton>
+                      <SumiButton variant="secondary" size="sm" onClick={() => setSettingsStore(s)}>
+                        シフト設定
                       </SumiButton>
                     </div>
                   </div>
@@ -320,6 +376,144 @@ export function AdminStoresPage() {
             </fieldset>
           </div>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={settingsStore !== null}
+        onClose={() => {
+          if (!settingsMutation.isPending) {
+            setSettingsStore(null);
+            setSettingsDraft([]);
+          }
+        }}
+        eyebrow="月"
+        title={`${settingsStore?.display_name ?? ""} シフト月次設定`}
+        maxWidth="960px"
+        footer={
+          <>
+            <SumiButton
+              variant="ghost"
+              onClick={() => {
+                setSettingsStore(null);
+                setSettingsDraft([]);
+              }}
+              disabled={settingsMutation.isPending}
+            >
+              閉じる
+            </SumiButton>
+            <SumiButton
+              variant="primary"
+              onClick={() => settingsMutation.mutate()}
+              disabled={settingsMutation.isPending || settingsDraft.length === 0}
+            >
+              保存する
+            </SumiButton>
+          </>
+        }
+      >
+        {monthlySettingsQuery.isLoading ? (
+          <p className="wa-stores__empty">設定を読み込んでおります…</p>
+        ) : (
+          <div className="wa-stores__shiftSettings">
+            <p className="wa-stores__shiftSettingsLead">
+              月ごとに、毎年使う平日・土日祝・繁忙期の必要人数を設定します。
+              募集作成時は店舗の営業時間をそのままシフト枠の時間として使います。
+            </p>
+            <div className="wa-stores__shiftSettingsGrid">
+              {MONTHS.map((month) => {
+                const row = settingsDraft.find((s) => s.month === month);
+                if (!row) return null;
+                return (
+                  <section key={month} className="wa-stores__shiftMonth">
+                    <h3>{month}月</h3>
+                    <label>
+                      枠名
+                      <input
+                        type="text"
+                        value={row.slot_name}
+                        onChange={(e) => updateMonthlySetting(month, { slot_name: e.target.value })}
+                      />
+                    </label>
+                    <div className="wa-stores__shiftMonthCounts">
+                      <label>
+                        平日
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={row.weekday_required_count}
+                          onChange={(e) =>
+                            updateMonthlySetting(month, {
+                              weekday_required_count: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        土日祝
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={row.holiday_required_count}
+                          onChange={(e) =>
+                            updateMonthlySetting(month, {
+                              holiday_required_count: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        繁忙
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={row.busy_required_count}
+                          onChange={(e) =>
+                            updateMonthlySetting(month, {
+                              busy_required_count: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="wa-stores__shiftMonthBusy">
+                      <label>
+                        繁忙開始日
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={row.busy_from_day ?? ""}
+                          onChange={(e) =>
+                            updateMonthlySetting(month, {
+                              busy_from_day: e.target.value ? Number(e.target.value) : null,
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        繁忙終了日
+                        <input
+                          type="number"
+                          min={1}
+                          max={31}
+                          value={row.busy_to_day ?? ""}
+                          onChange={(e) =>
+                            updateMonthlySetting(month, {
+                              busy_to_day: e.target.value ? Number(e.target.value) : null,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Modal>
 
       {toast ? (

@@ -14,6 +14,8 @@ export const correctionStatusSchema = z.enum(["pending", "approved", "rejected"]
 
 export const shiftPreferenceSchema = z.enum(["available", "preferred", "unavailable"]);
 
+export const shiftPeriodStatusSchema = z.enum(["open", "closed"]);
+
 export const workStateSchema = z.enum(["off", "working", "on_break"]);
 
 /** 'YYYY-MM-DD' */
@@ -184,10 +186,110 @@ export const shiftConflictsQuerySchema = z.object({
   to: dateStringSchema,
 });
 
+// ---------- Shift Recruitment Periods ----------
+
+export const shiftRequirementRuleSchema = z
+  .object({
+    slot_name: z.string().min(1).max(64),
+    start_time: timeStringSchema,
+    end_time: timeStringSchema,
+    required_count: z.number().int().min(0).max(50),
+    weekdays: z.array(weekdayIntSchema).min(1).max(7).optional(),
+    include_holidays: z.boolean().optional(),
+    busy_from: dateStringSchema.optional(),
+    busy_to: dateStringSchema.optional(),
+    busy_required_count: z.number().int().min(0).max(50).optional(),
+  })
+  .refine(shiftTimeRefinement, {
+    message: "start_time must be before end_time",
+    path: ["end_time"],
+  })
+  .refine(
+    (v) => {
+      if (v.busy_from == null && v.busy_to == null) return true;
+      return v.busy_from != null && v.busy_to != null && v.busy_from <= v.busy_to;
+    },
+    {
+      message: "busy_from and busy_to must be set and ordered",
+      path: ["busy_to"],
+    },
+  );
+
+export const createShiftPeriodSchema = z
+  .object({
+    store_id: idSchema,
+    name: z.string().min(1).max(96).optional(),
+    target_from: dateStringSchema,
+    target_to: dateStringSchema,
+    submission_from: dateStringSchema,
+    submission_to: dateStringSchema,
+    rules: z.array(shiftRequirementRuleSchema).min(1).max(12).optional(),
+  })
+  .refine((v) => v.target_from <= v.target_to, {
+    message: "target_from must be <= target_to",
+    path: ["target_to"],
+  })
+  .refine((v) => v.submission_from <= v.submission_to, {
+    message: "submission_from must be <= submission_to",
+    path: ["submission_to"],
+  });
+
+export const updateShiftPeriodSchema = z.object({
+  status: shiftPeriodStatusSchema,
+});
+
+export const listShiftPeriodsQuerySchema = z.object({
+  store_id: z.coerce.number().int().positive().optional(),
+  from: dateStringSchema.optional(),
+  to: dateStringSchema.optional(),
+  open_only: z
+    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .transform((v) => v === true || v === "true")
+    .optional(),
+});
+
+export const shiftPeriodIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+// ---------- Shift Monthly Settings ----------
+
+export const shiftMonthlySettingSchema = z
+  .object({
+    month: z.number().int().min(1).max(12),
+    slot_name: z.string().min(1).max(64),
+    weekday_required_count: z.number().int().min(0).max(50),
+    holiday_required_count: z.number().int().min(0).max(50),
+    busy_required_count: z.number().int().min(0).max(50),
+    busy_from_day: z.number().int().min(1).max(31).nullable().optional(),
+    busy_to_day: z.number().int().min(1).max(31).nullable().optional(),
+  })
+  .refine(
+    (v) => {
+      if (v.busy_from_day == null && v.busy_to_day == null) return true;
+      return v.busy_from_day != null && v.busy_to_day != null && v.busy_from_day <= v.busy_to_day;
+    },
+    {
+      message: "busy_from_day and busy_to_day must be set and ordered",
+      path: ["busy_to_day"],
+    },
+  );
+
+export const upsertShiftMonthlySettingsSchema = z.object({
+  store_id: idSchema,
+  settings: z.array(shiftMonthlySettingSchema).min(1).max(12),
+});
+
+export const listShiftMonthlySettingsQuerySchema = z.object({
+  store_id: z.coerce.number().int().positive(),
+});
+
 // ---------- Shift Requests ----------
 
 export const createShiftRequestSchema = z
   .object({
+    period_id: idSchema.optional(),
+    store_id: idSchema.optional(),
     date: dateStringSchema,
     start_time: timeStringSchema.nullable().optional(),
     end_time: timeStringSchema.nullable().optional(),
@@ -211,6 +313,7 @@ export const createShiftRequestSchema = z
 export const listShiftRequestsQuerySchema = z.object({
   from: dateStringSchema.optional(),
   to: dateStringSchema.optional(),
+  period_id: z.coerce.number().int().positive().optional(),
 });
 
 // ---------- Correction Requests ----------
