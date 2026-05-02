@@ -20,6 +20,7 @@ const {
   findConflicts,
   listShifts,
   listShiftMonthlySettings,
+  listShiftRequests,
   publishShift,
   publishShifts,
   updateShift,
@@ -341,9 +342,91 @@ describe("shift requests", () => {
     if ("kind" in r) return;
     expect(r.id).toBeGreaterThan(0);
   });
+
+  it("replaces same-day period request with one row", () => {
+    const { storeId, empA, managerId } = seedBaseline();
+    const periodResult = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(periodResult.kind).toBe("ok");
+    if (periodResult.kind !== "ok") return;
+
+    const first = createShiftRequest(
+      {
+        employee_id: empA,
+        period_id: periodResult.period.id,
+        date: "2026-05-11",
+        preference: "preferred",
+        start_time: "10:00",
+        end_time: "14:00",
+        note: "first",
+      },
+      Date.parse("2026-05-05T00:00:00Z"),
+    );
+    expect("kind" in first).toBe(false);
+    if ("kind" in first) return;
+
+    const second = createShiftRequest(
+      {
+        employee_id: empA,
+        period_id: periodResult.period.id,
+        date: "2026-05-11",
+        preference: "unavailable",
+        start_time: null,
+        end_time: null,
+        note: "changed",
+      },
+      Date.parse("2026-05-06T00:00:00Z"),
+    );
+    expect("kind" in second).toBe(false);
+    if ("kind" in second) return;
+
+    const requests = listShiftRequests({ period_id: periodResult.period.id });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.id).toBe(first.id);
+    expect(requests[0]?.preference).toBe("unavailable");
+    expect(requests[0]?.note).toBe("changed");
+
+    // biome-ignore lint/suspicious/noExplicitAny: internal handle access for schema verification
+    const indexes = (db as any).$client.pragma("index_list('shift_requests')") as Array<{
+      name: string;
+      unique: number;
+    }>;
+    expect(indexes.some((idx) => idx.name === "idx_shift_req_period_emp_date" && idx.unique)).toBe(
+      true,
+    );
+  });
 });
 
 describe("shift recruitment periods", () => {
+  it("returns conflict for overlapping open periods in the same store", () => {
+    const { storeId, managerId } = seedBaseline();
+    const first = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-11",
+      target_to: "2026-05-12",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(first.kind).toBe("ok");
+
+    const overlapping = createShiftPeriod({
+      store_id: storeId,
+      target_from: "2026-05-12",
+      target_to: "2026-05-13",
+      submission_from: "2026-05-01",
+      submission_to: "2026-05-10",
+      created_by: managerId,
+    });
+    expect(overlapping.kind).toBe("conflict");
+  });
+
   it("creates requirement slots and auto-drafts matching requests", () => {
     const { storeId, empA, empB, managerId } = seedBaseline();
     const periodResult = createShiftPeriod({

@@ -219,7 +219,7 @@ export const shiftRequests = sqliteTable(
       sql`${table.preference} IN ('available','preferred','unavailable')`,
     ),
     index("idx_shift_req_date").on(table.date),
-    index("idx_shift_req_period_emp").on(table.periodId, table.employeeId),
+    uniqueIndex("idx_shift_req_period_emp_date").on(table.periodId, table.employeeId, table.date),
   ],
 );
 

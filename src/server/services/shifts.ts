@@ -135,7 +135,7 @@ export interface ListShiftsQuery {
 
 export type ShiftServiceError =
   | { kind: "not_found" }
-  | { kind: "conflict"; conflicting: ShiftRow[] }
+  | { kind: "conflict"; conflicting?: ShiftRow[] }
   | { kind: "invalid"; message: string };
 
 function rowToShift(r: typeof schema.shifts.$inferSelect): ShiftRow {
@@ -745,6 +745,20 @@ export function createShiftPeriod(
     }
   }
 
+  const overlappingOpen = db
+    .select({ id: schema.shiftRecruitmentPeriods.id })
+    .from(schema.shiftRecruitmentPeriods)
+    .where(
+      and(
+        eq(schema.shiftRecruitmentPeriods.storeId, input.store_id),
+        eq(schema.shiftRecruitmentPeriods.status, "open"),
+        lte(schema.shiftRecruitmentPeriods.targetFrom, input.target_to),
+        gte(schema.shiftRecruitmentPeriods.targetTo, input.target_from),
+      ),
+    )
+    .get();
+  if (overlappingOpen) return { kind: "conflict" };
+
   const periodRow = db
     .insert(schema.shiftRecruitmentPeriods)
     .values({
@@ -1149,6 +1163,7 @@ export function createShiftRequest(
   now: number = Date.now(),
 ): ShiftRequestRow | ShiftServiceError {
   const period = input.period_id != null ? getShiftPeriod(input.period_id) : null;
+  if (input.period_id != null && !period) return { kind: "not_found" };
   const storeId = period?.store_id ?? input.store_id ?? null;
   if (period) {
     const today = todayYmd(now);
@@ -1166,32 +1181,44 @@ export function createShiftRequest(
   if (storeId != null && !employeeBelongsToStore(input.employee_id, storeId)) {
     return { kind: "invalid", message: "employee does not belong to store" };
   }
-  if (input.period_id != null) {
-    db.delete(schema.shiftRequests)
-      .where(
-        and(
-          eq(schema.shiftRequests.employeeId, input.employee_id),
-          eq(schema.shiftRequests.periodId, input.period_id),
-          eq(schema.shiftRequests.date, input.date),
-        ),
-      )
-      .run();
-  }
-  const inserted = db
-    .insert(schema.shiftRequests)
-    .values({
-      employeeId: input.employee_id,
-      periodId: input.period_id ?? null,
-      storeId,
-      date: input.date,
-      startTime: input.start_time ?? null,
-      endTime: input.end_time ?? null,
-      preference: input.preference,
-      note: input.note ?? null,
-      submittedAt: now,
-    })
-    .returning()
-    .get();
+
+  const values = {
+    employeeId: input.employee_id,
+    periodId: input.period_id ?? null,
+    storeId,
+    date: input.date,
+    startTime: input.start_time ?? null,
+    endTime: input.end_time ?? null,
+    preference: input.preference,
+    note: input.note ?? null,
+    submittedAt: now,
+  };
+
+  const inserted = db.transaction((tx) => {
+    if (input.period_id == null) {
+      return tx.insert(schema.shiftRequests).values(values).returning().get();
+    }
+    return tx
+      .insert(schema.shiftRequests)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [
+          schema.shiftRequests.periodId,
+          schema.shiftRequests.employeeId,
+          schema.shiftRequests.date,
+        ],
+        set: {
+          storeId,
+          startTime: input.start_time ?? null,
+          endTime: input.end_time ?? null,
+          preference: input.preference,
+          note: input.note ?? null,
+          submittedAt: now,
+        },
+      })
+      .returning()
+      .get();
+  });
   return rowToShiftRequest(inserted);
 }
 

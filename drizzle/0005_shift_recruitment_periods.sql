@@ -43,4 +43,4 @@ ALTER TABLE `shift_requests` ADD `period_id` integer REFERENCES `shift_recruitme
 --> statement-breakpoint
 ALTER TABLE `shift_requests` ADD `store_id` integer REFERENCES `stores`(`id`) ON DELETE cascade;
 --> statement-breakpoint
-CREATE INDEX `idx_shift_req_period_emp` ON `shift_requests` (`period_id`,`employee_id`);
+CREATE UNIQUE INDEX `idx_shift_req_period_emp_date` ON `shift_requests` (`period_id`,`employee_id`,`date`);
