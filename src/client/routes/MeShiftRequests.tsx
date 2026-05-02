@@ -3,6 +3,8 @@ import {
   createShiftRequest,
   deleteShiftRequest,
   fetchMyShiftRequests,
+  fetchOpenShiftPeriods,
+  type ShiftPeriod,
   type ShiftPreference,
   type ShiftRequestRow,
 } from "../api/shifts";
@@ -33,8 +35,26 @@ function nextWeekYmd(): string {
   return toYmd(d);
 }
 
+function addDays(d: Date, n: number): Date {
+  const next = new Date(d);
+  next.setDate(next.getDate() + n);
+  return next;
+}
+
+function enumerateYmd(from: string, to: string): string[] {
+  const start = fromYmd(from);
+  const end = fromYmd(to);
+  const out: string[] = [];
+  for (let cur = start; cur.getTime() <= end.getTime(); cur = addDays(cur, 1)) {
+    out.push(toYmd(cur));
+  }
+  return out;
+}
+
 export function MeShiftRequests() {
   const [rows, setRows] = useState<ShiftRequestRow[]>([]);
+  const [periods, setPeriods] = useState<ShiftPeriod[]>([]);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,11 +71,13 @@ export function MeShiftRequests() {
   const [withdrawTarget, setWithdrawTarget] = useState<ShiftRequestRow | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
 
+  const activePeriod = periods.find((p) => p.id === selectedPeriodId) ?? periods[0] ?? null;
+
   const reload = useCallback(() => {
     const ac = new AbortController();
     setLoading(true);
     setError(null);
-    fetchMyShiftRequests({}, ac.signal)
+    fetchMyShiftRequests(activePeriod ? { period_id: activePeriod.id } : {}, ac.signal)
       .then(setRows)
       .catch((e) => {
         if ((e as { name?: string }).name === "AbortError") return;
@@ -63,11 +85,26 @@ export function MeShiftRequests() {
       })
       .finally(() => setLoading(false));
     return () => ac.abort();
-  }, []);
+  }, [activePeriod]);
 
   useEffect(() => {
     return reload();
   }, [reload]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    fetchOpenShiftPeriods(ac.signal)
+      .then((next) => {
+        setPeriods(next);
+        setSelectedPeriodId((current) => current ?? next[0]?.id ?? null);
+        const first = next[0];
+        if (first) setDate(first.target_from);
+      })
+      .catch(() => {
+        setPeriods([]);
+      });
+    return () => ac.abort();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +117,8 @@ export function MeShiftRequests() {
     setSubmitting(true);
     try {
       await createShiftRequest({
+        period_id: activePeriod?.id,
+        store_id: activePeriod?.store_id,
         date,
         preference,
         start_time: allDay ? null : startTime,
@@ -118,6 +157,10 @@ export function MeShiftRequests() {
       ? `${withdrawTarget.start_time.slice(0, 5)} 〜 ${withdrawTarget.end_time.slice(0, 5)}`
       : "終日"
     : "";
+  const periodDates = activePeriod
+    ? enumerateYmd(activePeriod.target_from, activePeriod.target_to)
+    : [];
+  const rowsByDate = new Map(rows.map((r) => [r.date, r]));
 
   return (
     <div className="me-page">
@@ -127,107 +170,184 @@ export function MeShiftRequests() {
         <p className="me-page__subtitle">出勤可能な日時を店長に伝えられます</p>
       </header>
 
-      <WashiCard padding="lg" eyebrow="希望提出" title="新しい希望を出す">
-        <form className="me-form" onSubmit={handleSubmit}>
-          <div className="me-form__field">
-            <label className="me-form__label" htmlFor="me-req-date">
-              対象日
-            </label>
-            <input
-              id="me-req-date"
-              type="date"
-              className="me-form__input"
-              value={date}
-              min={toYmd(new Date())}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="me-form__field">
-            <label className="me-form__label" htmlFor="me-req-pref">
-              希望種別
-            </label>
-            <select
-              id="me-req-pref"
-              className="me-form__select"
-              value={preference}
-              onChange={(e) => setPreference(e.target.value as ShiftPreference)}
-            >
-              {PREFERENCE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="me-form__field me-form__field--full">
-            <label
-              className="me-form__label"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={allDay}
-                onChange={(e) => setAllDay(e.target.checked)}
-              />
-              終日
-            </label>
-          </div>
-          {!allDay ? (
-            <>
-              <div className="me-form__field">
-                <label className="me-form__label" htmlFor="me-req-start">
-                  開始時刻
-                </label>
-                <input
-                  id="me-req-start"
-                  type="time"
-                  className="me-form__input"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                />
+      <WashiCard
+        padding="lg"
+        eyebrow="希望提出"
+        title={activePeriod ? activePeriod.name : "現在提出できる募集はありません"}
+      >
+        {periods.length > 0 ? (
+          <div className="me-request-workspace">
+            <section className="me-request-workspace__calendar" aria-label="提出期間と日付選択">
+              <div className="me-request-period">
+                <div className="me-form__field">
+                  <label className="me-form__label" htmlFor="me-period">
+                    募集
+                  </label>
+                  <select
+                    id="me-period"
+                    className="me-form__select"
+                    value={activePeriod?.id ?? ""}
+                    onChange={(e) => {
+                      const nextId = Number(e.target.value);
+                      setSelectedPeriodId(nextId);
+                      const next = periods.find((p) => p.id === nextId);
+                      if (next) setDate(next.target_from);
+                    }}
+                  >
+                    {periods.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {activePeriod ? (
+                  <p className="me-request-period__meta">
+                    対象 {activePeriod.target_from} 〜 {activePeriod.target_to}
+                    <span>提出締切 {activePeriod.submission_to}</span>
+                  </p>
+                ) : null}
               </div>
-              <div className="me-form__field">
-                <label className="me-form__label" htmlFor="me-req-end">
-                  終了時刻
-                </label>
-                <input
-                  id="me-req-end"
-                  type="time"
-                  className="me-form__input"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                />
+              <fieldset className="me-request-calendar">
+                <legend>シフト希望カレンダー</legend>
+                {periodDates.map((ymd) => {
+                  const d = fromYmd(ymd);
+                  const submitted = rowsByDate.get(ymd);
+                  const meta = submitted ? preferenceMeta(submitted.preference) : null;
+                  return (
+                    <button
+                      key={ymd}
+                      type="button"
+                      className={`me-request-calendar__day${date === ymd ? " is-selected" : ""}${
+                        submitted ? " is-submitted" : ""
+                      }`}
+                      onClick={() => setDate(ymd)}
+                    >
+                      <span>
+                        {d.getMonth() + 1}/{d.getDate()} ({jpWeekday(d)})
+                      </span>
+                      <strong>{meta ? meta.label : "未提出"}</strong>
+                    </button>
+                  );
+                })}
+              </fieldset>
+            </section>
+
+            <section className="me-request-workspace__form" aria-label="希望入力">
+              <div className="me-request-form-head">
+                <span>希望入力</span>
+                <strong>{date ? `${date.slice(5, 7)}/${date.slice(8, 10)}` : "日付未選択"}</strong>
               </div>
-            </>
-          ) : null}
-          <div className="me-form__field me-form__field--full">
-            <label className="me-form__label" htmlFor="me-req-note">
-              備考
-            </label>
-            <textarea
-              id="me-req-note"
-              className="me-form__textarea"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={512}
-              placeholder="例: 午前中のみ希望"
-            />
+              <form className="me-form me-form--shift-request" onSubmit={handleSubmit}>
+                <div className="me-form__field">
+                  <label className="me-form__label" htmlFor="me-req-date">
+                    対象日
+                  </label>
+                  <input
+                    id="me-req-date"
+                    type="date"
+                    className="me-form__input"
+                    value={date}
+                    min={activePeriod?.target_from ?? toYmd(new Date())}
+                    max={activePeriod?.target_to}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="me-form__field">
+                  <label className="me-form__label" htmlFor="me-req-pref">
+                    希望種別
+                  </label>
+                  <select
+                    id="me-req-pref"
+                    className="me-form__select"
+                    value={preference}
+                    onChange={(e) => setPreference(e.target.value as ShiftPreference)}
+                  >
+                    {PREFERENCE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="me-form__field me-form__field--full">
+                  <label
+                    className="me-form__label"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={allDay}
+                      onChange={(e) => setAllDay(e.target.checked)}
+                    />
+                    終日
+                  </label>
+                </div>
+                {!allDay ? (
+                  <>
+                    <div className="me-form__field">
+                      <label className="me-form__label" htmlFor="me-req-start">
+                        開始時刻
+                      </label>
+                      <input
+                        id="me-req-start"
+                        type="time"
+                        className="me-form__input"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="me-form__field">
+                      <label className="me-form__label" htmlFor="me-req-end">
+                        終了時刻
+                      </label>
+                      <input
+                        id="me-req-end"
+                        type="time"
+                        className="me-form__input"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </>
+                ) : null}
+                <div className="me-form__field me-form__field--full">
+                  <label className="me-form__label" htmlFor="me-req-note">
+                    備考
+                  </label>
+                  <textarea
+                    id="me-req-note"
+                    className="me-form__textarea"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    maxLength={512}
+                    placeholder="例: 午前中のみ希望"
+                  />
+                </div>
+                {formError ? <p className="me-form__error">{formError}</p> : null}
+                {formSuccess ? <p className="me-form__success">{formSuccess}</p> : null}
+                <div className="me-form__actions">
+                  <SumiButton
+                    type="submit"
+                    variant="primary"
+                    disabled={submitting || !activePeriod}
+                  >
+                    {submitting ? "送信中…" : "希望を提出"}
+                  </SumiButton>
+                </div>
+              </form>
+            </section>
           </div>
-          {formError ? <p className="me-form__error">{formError}</p> : null}
-          {formSuccess ? <p className="me-form__success">{formSuccess}</p> : null}
-          <div className="me-form__actions">
-            <SumiButton type="submit" variant="primary" disabled={submitting}>
-              {submitting ? "送信中…" : "希望を提出"}
-            </SumiButton>
-          </div>
-        </form>
+        ) : (
+          <p className="me-state">今はシフト希望の提出期間ではありません。</p>
+        )}
       </WashiCard>
 
       <WashiCard padding="lg" eyebrow="提出済み" title="希望一覧">

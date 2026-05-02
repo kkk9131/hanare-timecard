@@ -24,6 +24,9 @@ function clear(): void {
   sqlite.exec("DELETE FROM audit_logs");
   sqlite.exec("DELETE FROM correction_requests");
   sqlite.exec("DELETE FROM shift_requests");
+  sqlite.exec("DELETE FROM shift_requirement_slots");
+  sqlite.exec("DELETE FROM shift_recruitment_periods");
+  sqlite.exec("DELETE FROM shift_monthly_settings");
   sqlite.exec("DELETE FROM shifts");
   sqlite.exec("DELETE FROM work_days");
   sqlite.exec("DELETE FROM time_punches");

@@ -94,4 +94,35 @@
 .wa-me-nav__footer {
   border-top: 1px solid var(--border-hairline);
   padding-top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.wa-me-nav__kiosk-link {
+  display: block;
+  padding: var(--space-3);
+  color: var(--kincha-300);
+  text-decoration: none;
+  text-align: center;
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-sm);
+  background-color: rgba(184, 134, 11, 0.08);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-mincho);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.wa-me-nav__kiosk-link:hover {
+  color: var(--washi-50);
+  background-color: rgba(184, 134, 11, 0.14);
+  box-shadow: var(--shadow-andon-hover);
+}
+
+.wa-me-nav__kiosk-link:focus-visible {
+  outline: 2px solid var(--kincha-400);
+  outline-offset: 2px;
 }

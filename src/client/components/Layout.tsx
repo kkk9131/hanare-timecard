@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { logout } from "../api/auth";
 import { storeShortLabel } from "../lib/storeLabels";
 import { useKioskStore } from "../state/kioskStore";
@@ -77,6 +77,9 @@ export function EmployeeLayout({ children }: LayoutProps) {
             </ul>
           </nav>
           <div className="wa-me-nav__footer">
+            <Link className="wa-me-nav__kiosk-link" to="/">
+              打刻画面へ戻る
+            </Link>
             <SumiButton variant="ghost" size="sm" block onClick={handleLogout}>
               ログアウト
             </SumiButton>

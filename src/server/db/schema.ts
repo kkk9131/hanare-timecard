@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const stores = sqliteTable("stores", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -109,6 +117,84 @@ export const shifts = sqliteTable(
   ],
 );
 
+export const shiftRecruitmentPeriods = sqliteTable(
+  "shift_recruitment_periods",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    storeId: integer("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    targetFrom: text("target_from").notNull(),
+    targetTo: text("target_to").notNull(),
+    submissionFrom: text("submission_from").notNull(),
+    submissionTo: text("submission_to").notNull(),
+    status: text("status").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => employees.id),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    check("shift_periods_status_check", sql`${table.status} IN ('open','closed')`),
+    index("idx_shift_periods_store_target").on(table.storeId, table.targetFrom, table.targetTo),
+    index("idx_shift_periods_submission").on(table.submissionFrom, table.submissionTo),
+  ],
+);
+
+export const shiftRequirementSlots = sqliteTable(
+  "shift_requirement_slots",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    periodId: integer("period_id")
+      .notNull()
+      .references(() => shiftRecruitmentPeriods.id, { onDelete: "cascade" }),
+    storeId: integer("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    slotName: text("slot_name").notNull(),
+    startTime: text("start_time").notNull(),
+    endTime: text("end_time").notNull(),
+    requiredCount: integer("required_count").notNull(),
+    source: text("source").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    check("shift_slots_required_check", sql`${table.requiredCount} >= 0`),
+    index("idx_shift_slots_period_date").on(table.periodId, table.date),
+    index("idx_shift_slots_store_date").on(table.storeId, table.date),
+  ],
+);
+
+export const shiftMonthlySettings = sqliteTable(
+  "shift_monthly_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    storeId: integer("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "cascade" }),
+    month: integer("month").notNull(),
+    slotName: text("slot_name").notNull(),
+    weekdayRequiredCount: integer("weekday_required_count").notNull(),
+    holidayRequiredCount: integer("holiday_required_count").notNull(),
+    busyRequiredCount: integer("busy_required_count").notNull(),
+    busyFromDay: integer("busy_from_day"),
+    busyToDay: integer("busy_to_day"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    updatedBy: integer("updated_by").references(() => employees.id),
+  },
+  (table) => [
+    uniqueIndex("idx_shift_monthly_store_month").on(table.storeId, table.month),
+    check("shift_monthly_month_check", sql`${table.month} BETWEEN 1 AND 12`),
+    check("shift_monthly_weekday_count_check", sql`${table.weekdayRequiredCount} >= 0`),
+    check("shift_monthly_holiday_count_check", sql`${table.holidayRequiredCount} >= 0`),
+    check("shift_monthly_busy_count_check", sql`${table.busyRequiredCount} >= 0`),
+  ],
+);
+
 export const shiftRequests = sqliteTable(
   "shift_requests",
   {
@@ -116,6 +202,10 @@ export const shiftRequests = sqliteTable(
     employeeId: integer("employee_id")
       .notNull()
       .references(() => employees.id),
+    periodId: integer("period_id").references(() => shiftRecruitmentPeriods.id, {
+      onDelete: "cascade",
+    }),
+    storeId: integer("store_id").references(() => stores.id, { onDelete: "cascade" }),
     date: text("date").notNull(),
     startTime: text("start_time"),
     endTime: text("end_time"),
@@ -129,6 +219,7 @@ export const shiftRequests = sqliteTable(
       sql`${table.preference} IN ('available','preferred','unavailable')`,
     ),
     index("idx_shift_req_date").on(table.date),
+    index("idx_shift_req_period_emp").on(table.periodId, table.employeeId),
   ],
 );
 

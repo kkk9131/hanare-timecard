@@ -48,6 +48,8 @@ export function fetchMyShifts(
 export const shiftRequestRowSchema = z.object({
   id: z.number(),
   employee_id: z.number(),
+  period_id: z.number().nullable().optional(),
+  store_id: z.number().nullable().optional(),
   date: z.string(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
@@ -63,12 +65,13 @@ const myShiftRequestsResponseSchema = z.object({
 });
 
 export function fetchMyShiftRequests(
-  args: { from?: string; to?: string } = {},
+  args: { from?: string; to?: string; period_id?: number } = {},
   signal?: AbortSignal,
 ): Promise<ShiftRequestRow[]> {
   const params = new URLSearchParams();
   if (args.from) params.set("from", args.from);
   if (args.to) params.set("to", args.to);
+  if (args.period_id != null) params.set("period_id", String(args.period_id));
   const qs = params.toString();
   return apiClient
     .get(`/api/shift-requests/me${qs ? `?${qs}` : ""}`, myShiftRequestsResponseSchema, signal)
@@ -76,6 +79,8 @@ export function fetchMyShiftRequests(
 }
 
 export type CreateShiftRequestInput = {
+  period_id?: number;
+  store_id?: number;
   date: string;
   start_time?: string | null;
   end_time?: string | null;
@@ -100,4 +105,41 @@ export function deleteShiftRequest(id: number, signal?: AbortSignal): Promise<vo
   return apiClient
     .delete(`/api/shift-requests/${id}`, z.object({ ok: z.boolean() }), signal)
     .then(() => undefined);
+}
+
+// ---------- shift recruitment periods ----------
+
+export const shiftPeriodSchema = z.object({
+  id: z.number(),
+  store_id: z.number(),
+  name: z.string(),
+  target_from: z.string(),
+  target_to: z.string(),
+  submission_from: z.string(),
+  submission_to: z.string(),
+  status: z.enum(["open", "closed"]),
+});
+export type ShiftPeriod = z.infer<typeof shiftPeriodSchema>;
+
+const openShiftPeriodsResponseSchema = z.object({
+  periods: z.array(shiftPeriodSchema),
+});
+
+export function fetchOpenShiftPeriods(signal?: AbortSignal): Promise<ShiftPeriod[]> {
+  return apiClient
+    .get("/api/shift-periods/open", openShiftPeriodsResponseSchema, signal)
+    .then((r) => r.periods);
+}
+
+export function fetchPublicOpenShiftPeriods(
+  storeId: number,
+  signal?: AbortSignal,
+): Promise<ShiftPeriod[]> {
+  return apiClient
+    .get(
+      `/api/shift-periods/public-open?store_id=${encodeURIComponent(String(storeId))}`,
+      openShiftPeriodsResponseSchema,
+      signal,
+    )
+    .then((r) => r.periods);
 }

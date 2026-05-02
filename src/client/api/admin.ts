@@ -245,6 +245,8 @@ export function getShiftConflicts(
 export const shiftRequestSchema = z.object({
   id: z.number(),
   employee_id: z.number(),
+  period_id: z.number().nullable().optional(),
+  store_id: z.number().nullable().optional(),
   date: z.string(),
   start_time: z.string().nullable(),
   end_time: z.string().nullable(),
@@ -258,14 +260,172 @@ const shiftRequestsResponseSchema = z.object({
   requests: z.array(shiftRequestSchema),
 });
 
-export function listShiftRequests(q: { from?: string; to?: string }, signal?: AbortSignal) {
+export function listShiftRequests(
+  q: { from?: string; to?: string; period_id?: number },
+  signal?: AbortSignal,
+) {
   const params = new URLSearchParams();
   if (q.from) params.set("from", q.from);
   if (q.to) params.set("to", q.to);
+  if (q.period_id != null) params.set("period_id", String(q.period_id));
   const qs = params.toString();
   return apiClient
     .get(`/api/shift-requests${qs ? `?${qs}` : ""}`, shiftRequestsResponseSchema, signal)
     .then((r) => r.requests);
+}
+
+// ----- Shift recruitment periods -----
+
+export const shiftPeriodSchema = z.object({
+  id: z.number(),
+  store_id: z.number(),
+  name: z.string(),
+  target_from: z.string(),
+  target_to: z.string(),
+  submission_from: z.string(),
+  submission_to: z.string(),
+  status: z.enum(["open", "closed"]),
+  created_by: z.number().optional(),
+  created_at: z.number().optional(),
+  updated_at: z.number().optional(),
+});
+export type ShiftPeriod = z.infer<typeof shiftPeriodSchema>;
+
+export const shiftRequirementSlotSchema = z.object({
+  id: z.number(),
+  period_id: z.number(),
+  store_id: z.number(),
+  date: z.string(),
+  slot_name: z.string(),
+  start_time: z.string(),
+  end_time: z.string(),
+  required_count: z.number(),
+  source: z.string(),
+  created_at: z.number().optional(),
+});
+export type ShiftRequirementSlot = z.infer<typeof shiftRequirementSlotSchema>;
+
+const shiftPeriodsResponseSchema = z.object({
+  periods: z.array(shiftPeriodSchema),
+});
+
+export function listShiftPeriods(
+  q: { store_id?: number; from?: string; to?: string; open_only?: boolean } = {},
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams();
+  if (q.store_id != null) params.set("store_id", String(q.store_id));
+  if (q.from) params.set("from", q.from);
+  if (q.to) params.set("to", q.to);
+  if (q.open_only) params.set("open_only", "true");
+  const qs = params.toString();
+  return apiClient
+    .get(`/api/shift-periods${qs ? `?${qs}` : ""}`, shiftPeriodsResponseSchema, signal)
+    .then((r) => r.periods);
+}
+
+export type ShiftRequirementRuleBody = {
+  slot_name: string;
+  start_time: string;
+  end_time: string;
+  required_count: number;
+  weekdays?: number[];
+  include_holidays?: boolean;
+  busy_from?: string;
+  busy_to?: string;
+  busy_required_count?: number;
+};
+
+export type CreateShiftPeriodBody = {
+  store_id: number;
+  name?: string;
+  target_from: string;
+  target_to: string;
+  submission_from: string;
+  submission_to: string;
+  rules?: ShiftRequirementRuleBody[];
+};
+
+const createShiftPeriodResponseSchema = z.object({
+  period: shiftPeriodSchema,
+  slots: z.array(shiftRequirementSlotSchema),
+});
+
+export function createShiftPeriod(body: CreateShiftPeriodBody, signal?: AbortSignal) {
+  return apiClient.post("/api/shift-periods", createShiftPeriodResponseSchema, body, signal);
+}
+
+const shiftPeriodSummarySchema = z.object({
+  period: shiftPeriodSchema,
+  slots: z.array(
+    shiftRequirementSlotSchema.extend({
+      assigned_count: z.number(),
+      requested_count: z.number(),
+      shortage_count: z.number(),
+      over_requested_count: z.number(),
+    }),
+  ),
+  requests: z.array(shiftRequestSchema),
+  missing_employee_ids: z.array(z.number()),
+  unfit_requests: z.array(shiftRequestSchema),
+});
+export type ShiftPeriodSummary = z.infer<typeof shiftPeriodSummarySchema>;
+
+export function getShiftPeriodSummary(id: number, signal?: AbortSignal) {
+  return apiClient.get(`/api/shift-periods/${id}/summary`, shiftPeriodSummarySchema, signal);
+}
+
+const autoDraftResponseSchema = z.object({
+  kind: z.literal("ok"),
+  created: z.array(shiftSchema),
+  unfilled_slots: z.array(shiftRequirementSlotSchema.extend({ remaining: z.number() })),
+  skipped_request_ids: z.array(z.number()),
+});
+export type AutoDraftResult = z.infer<typeof autoDraftResponseSchema>;
+
+export function autoDraftShiftPeriod(id: number, signal?: AbortSignal) {
+  return apiClient.post(`/api/shift-periods/${id}/auto-draft`, autoDraftResponseSchema, {}, signal);
+}
+
+// ----- Shift monthly settings -----
+
+export const shiftMonthlySettingSchema = z.object({
+  id: z.number().optional(),
+  store_id: z.number().optional(),
+  month: z.number(),
+  slot_name: z.string(),
+  weekday_required_count: z.number(),
+  holiday_required_count: z.number(),
+  busy_required_count: z.number(),
+  busy_from_day: z.number().nullable().optional(),
+  busy_to_day: z.number().nullable().optional(),
+});
+export type ShiftMonthlySetting = z.infer<typeof shiftMonthlySettingSchema>;
+
+const shiftMonthlySettingsResponseSchema = z.object({
+  settings: z.array(shiftMonthlySettingSchema),
+});
+
+export function listShiftMonthlySettings(storeId: number, signal?: AbortSignal) {
+  return apiClient
+    .get(
+      `/api/shift-settings/monthly?store_id=${encodeURIComponent(String(storeId))}`,
+      shiftMonthlySettingsResponseSchema,
+      signal,
+    )
+    .then((r) => r.settings);
+}
+
+export function saveShiftMonthlySettings(
+  body: { store_id: number; settings: ShiftMonthlySetting[] },
+  signal?: AbortSignal,
+) {
+  return apiClient.put(
+    "/api/shift-settings/monthly",
+    shiftMonthlySettingsResponseSchema,
+    body,
+    signal,
+  );
 }
 
 // ---------- Corrections (manager+) ----------

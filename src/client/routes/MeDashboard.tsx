@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { type CorrectionRow, fetchMyCorrections } from "../api/corrections";
 import { fetchMyMonthSummary, type MonthSummary } from "../api/punches";
-import { fetchMyShifts, type MyShift } from "../api/shifts";
+import {
+  fetchMyShifts,
+  fetchOpenShiftPeriods,
+  type MyShift,
+  type ShiftPeriod,
+} from "../api/shifts";
 import { StatePill } from "../components/ui/StatePill";
 import { SumiButton } from "../components/ui/SumiButton";
 import { WashiCard } from "../components/ui/WashiCard";
@@ -35,6 +40,7 @@ function correctionLabel(s: CorrectionRow["status"]): string {
 export function MeDashboard() {
   const [summary, setSummary] = useState<MonthSummary | null>(null);
   const [weekShifts, setWeekShifts] = useState<MyShift[]>([]);
+  const [openPeriods, setOpenPeriods] = useState<ShiftPeriod[]>([]);
   const [corrections, setCorrections] = useState<CorrectionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,11 +58,13 @@ export function MeDashboard() {
     Promise.all([
       fetchMyMonthSummary(ac.signal),
       fetchMyShifts({ from: weekFrom, to: weekTo }, ac.signal),
+      fetchOpenShiftPeriods(ac.signal),
       fetchMyCorrections(ac.signal),
     ])
-      .then(([sum, shifts, corr]) => {
+      .then(([sum, shifts, periods, corr]) => {
         setSummary(sum);
         setWeekShifts(shifts);
+        setOpenPeriods(periods);
         setCorrections(corr);
       })
       .catch((e) => {
@@ -167,16 +175,30 @@ export function MeDashboard() {
             <WashiCard
               padding="lg"
               eyebrow="お知らせ"
-              title="修正申請の状況"
+              title={openPeriods.length > 0 ? "シフト希望の提出" : "修正申請の状況"}
               action={
-                <Link to="/me/corrections">
+                <Link to={openPeriods.length > 0 ? "/me/shift-requests" : "/me/corrections"}>
                   <SumiButton variant="ghost" size="sm">
-                    申請する
+                    {openPeriods.length > 0 ? "提出する" : "申請する"}
                   </SumiButton>
                 </Link>
               }
             >
-              {corrections.length === 0 ? (
+              {openPeriods.length > 0 ? (
+                <ul className="me-notice__list">
+                  {openPeriods.slice(0, 5).map((p) => (
+                    <li key={p.id} className="me-notice__item">
+                      <div className="me-notice__head">
+                        <span className="me-notice__date">{p.name}</span>
+                        <StatePill tone="warning" label="未提出確認" />
+                      </div>
+                      <p className="me-notice__reason">
+                        対象 {p.target_from} 〜 {p.target_to} ／ 締切 {p.submission_to}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : corrections.length === 0 ? (
                 <p className="me-state">未読のお知らせはありません</p>
               ) : (
                 <ul className="me-notice__list">

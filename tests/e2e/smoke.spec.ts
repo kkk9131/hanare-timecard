@@ -1,5 +1,6 @@
 import { stat } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { disableAdminOnboarding } from "./helpers";
 
 /**
  * task-6003 — E2E smoke (Playwright / chromium).
@@ -86,6 +87,7 @@ test.describe("task-6003 smoke", () => {
     }
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
+    await disableAdminOnboarding(adminPage);
     await adminPage.goto("/");
     await adminPage.getByRole("button", { name: "管理者画面へ" }).click();
     await expect(adminPage.getByRole("heading", { name: /雀庵 管理画面/ })).toBeVisible();

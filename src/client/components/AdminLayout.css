@@ -93,6 +93,29 @@
     box-shadow var(--dur-fast) var(--ease-out);
 }
 
+.wa-admin-nav__kioskLink {
+  display: block;
+  padding: var(--space-3);
+  color: var(--kincha-300);
+  text-decoration: none;
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-sm);
+  background-color: rgba(184, 134, 11, 0.08);
+  font-family: var(--font-mincho);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-mincho);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.wa-admin-nav__kioskLink:hover {
+  color: var(--washi-50);
+  background-color: rgba(184, 134, 11, 0.14);
+  box-shadow: var(--shadow-andon-hover);
+}
+
 .wa-admin-nav__helpLink:hover {
   color: var(--washi-50);
   background-color: rgba(184, 134, 11, 0.08);
