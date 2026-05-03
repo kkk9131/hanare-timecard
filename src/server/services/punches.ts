@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db, schema } from "../db/client.js";
 import { aggregatePunches, type PunchType } from "../lib/time.js";
 
@@ -179,7 +179,7 @@ export function listPunches(q: ListPunchesQuery): PunchRow[] {
     conds.push(inArray(schema.timePunches.storeId, q.store_ids) as ReturnType<typeof eq>);
   }
   if (q.from != null) conds.push(gte(schema.timePunches.punchedAt, q.from));
-  if (q.to != null) conds.push(lte(schema.timePunches.punchedAt, q.to));
+  if (q.to != null) conds.push(lt(schema.timePunches.punchedAt, q.to));
 
   const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
 
